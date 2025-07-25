@@ -62,3 +62,13 @@ Smartphone (Browser UI)
 Raspberry Pi (Server: API + RL + Groq)
      ↓   ↑
 Groq API (LLM Responses + Self-Evaluation)
+```
+
+## 🎯 Project Goals
+- Run lightweight server with RL models and Groq integration on Raspberry Pi
+- Offer mobile-first web UI to users for real-time LLM interaction
+- Optimize prompt quality using human and AI-based feedback
+- Use RL to learn from both explicit ratings and implicit signals (sentiment, hallucination score, Groq evaluation)
+- Visualize performance across multiple RL models over time
+
+### Let’s build smarter prompts, one reward at a time.

@@ -50,7 +50,7 @@
 | Kauthara     | RL Engineer         | A2C Model                                   |
 | SriDatta     | RL Engineer         | SAC Model                                   |
 | Ujju         | Prompt Engineer     | Prompt Rewriting Pipeline                   |
-| Thejaswi     | Data Analyst        | Evaluation Metrics & Visualization          |
+| Thejaswee     | Data Analyst        | Evaluation Metrics & Visualization          |
 
 ---
 

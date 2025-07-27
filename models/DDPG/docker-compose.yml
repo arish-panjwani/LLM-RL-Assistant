@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  ddpg-groq-app:
+    build: .
+    container_name: ddpg-groq-container
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_API_BASE=${GROQ_API_BASE}
+    stdin_open: true
+    tty: true

@@ -1,0 +1,8 @@
+stable-baselines3[extra]==2.0.0
+torch==2.0.1
+gymnasium==0.28.1
+tensorboard==2.14.1
+numpy==1.26.4
+groq==0.4.1
+sentence-transformers==2.2.2
+vaderSentiment==3.3.2

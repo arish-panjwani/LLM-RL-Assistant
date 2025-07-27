@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPO Prompt Optimizer Demo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 PPO Prompt Optimizer Demo</h1>
+            <p>Reinforcement Learning for Intelligent Conversational Assistant</p>
+        </header>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h2>📝 Enter Your Prompt</h2>
+                <div class="example-prompts">
+                    <button class="example-btn" onclick="setPrompt('What is machine learning?')">Machine Learning</button>
+                    <button class="example-btn" onclick="setPrompt('Explain quantum computing')">Quantum Computing</button>
+                    <button class="example-btn" onclick="setPrompt('How does photosynthesis work?')">Photosynthesis</button>
+                    <button class="example-btn" onclick="setPrompt('Tell me about climate change')">Climate Change</button>
+                    <button class="example-btn" onclick="setPrompt('What is artificial intelligence?')">AI</button>
+                </div>
+                <textarea id="promptInput" placeholder="Type your question here..." rows="4"></textarea>
+                <button id="optimizeBtn" onclick="optimizePrompt()">🚀 Optimize Prompt</button>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <h2>📊 Results</h2>
+                
+                <div class="comparison">
+                    <div class="prompt-card">
+                        <h3>📋 Original Prompt</h3>
+                        <div class="prompt-text" id="originalPrompt"></div>
+                    </div>
+                    <div class="prompt-card">
+                        <h3>✨ Optimized Prompt</h3>
+                        <div class="prompt-text" id="optimizedPrompt"></div>
+                    </div>
+                </div>
+
+                <div class="response-section">
+                    <h3>🤖 LLM Response</h3>
+                    <div class="response-text" id="llmResponse"></div>
+                </div>
+
+                <div class="metrics-section">
+                    <h3>📈 Performance Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-value" id="clarityScore">-</div>
+                            <div class="metric-label">Clarity Score</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="relevanceScore">-</div>
+                            <div class="metric-label">Relevance Score</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="hallucinationPenalty">-</div>
+                            <div class="metric-label">Hallucination Penalty</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Optimizing prompt with PPO model...</p>
+        </div>
+
+        <div class="error" id="error" style="display: none;">
+            <p>❌ Error: <span id="errorMessage"></span></p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

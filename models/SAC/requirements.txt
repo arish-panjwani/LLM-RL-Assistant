@@ -1,0 +1,6 @@
+torch
+sentence-transformers
+scikit-learn
+nltk
+openai
+python-dotenv

@@ -40,9 +40,19 @@ def batch_retrain(epochs: int = 10):
     config = Config()
     model_config = config.get_model_config()
     
-    # Initialize optimizer
+    # Initialize optimizer with proper model path handling
     model_path = "data/models/a2c_domain_agnostic_best.pth"
-    optimizer = PromptOptimizer(model_path, model_config)
+    
+    # Check if model file exists
+    if Path(model_path).exists():
+        print(f"📁 Loading existing model from: {model_path}")
+        optimizer = PromptOptimizer(model_path, model_config)
+    else:
+        print(f"📁 No existing model found. Creating new model...")
+        # Create models directory if it doesn't exist
+        Path(model_path).parent.mkdir(parents=True, exist_ok=True)
+        # Initialize with None to create a new model
+        optimizer = PromptOptimizer(None, model_config)
     
     # Load feedback data
     feedback_data = load_feedback_data()
@@ -95,8 +105,13 @@ def batch_retrain(epochs: int = 10):
     
     # Save the retrained model
     if optimizer.model:
+        # Ensure the directory exists
+        Path(model_path).parent.mkdir(parents=True, exist_ok=True)
         optimizer.model.save_model(model_path)
         print(f"\n💾 Model saved to: {model_path}")
+    else:
+        print("\n❌ No model to save - training failed")
+        return
     
     # Performance evaluation
     print("\n🔍 Evaluating Retrained Model...")

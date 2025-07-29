@@ -67,29 +67,6 @@ pip install torch numpy
 - `scripts/` - Training and evaluation tools
 - `demo/` - Web interface
 
-## Status: Complete ✅
-
-<<<<<<< HEAD
-- A2C Model: Fully implemented and tested
-- Real-Time Learning: Working with human feedback
-- Team Integration: Ready for handoff
-- Production Ready: Docker configured 
-=======
-### For Ujju (Prompt Engineer):
-- **Primary File**: `src/models/prompt_optimizer.py`
-- **Integration**: Use `PromptOptimizer` class for prompt optimization
-- **Example**: See `demo/TEAM_HANDOFF.md` for integration code
-
-### For Thejaswi (Data Analyst):
-- **Primary File**: `scripts/metrics_analysis.py`
-- **Data Source**: `demo/optimization_history.json`
-- **Analysis**: Extract metrics from optimization history
-
-### For Other Team Members:
-- **Arish (System Integration)**: `src/utils/groq_client.p
-- **Kanika (Testing)**: Use `scripts/test_feedback.py`
-- **Mueez (Deployment)**: Use `Dockerfile`
-
 ## 🔧 API Setup (Optional)
 
 For real LLM responses, see `API_SETUP.md` for detailed instructions on:

@@ -1,6 +1,6 @@
 # A2C (Actor-Critic) Reinforcement Learning Model
 
-**Kauthara's Assignment: Intelligent Conversational Assistant with RL-Optimized Prompt Engineering**
+** Assignment: Intelligent Conversational Assistant with RL-Optimized Prompt Engineering**
 
 ## Overview
 
@@ -87,7 +87,7 @@ For real LLM responses, see `API_SETUP.md` for detailed instructions on:
 - `src/utils/groq_client.py` - Groq API integration
 - `scripts/metrics_analysis.py` - Data analysis tools
 
-`
+
 ### Testing & Demo:
 - `demo/app.py` - Flask web interface
 - `scripts/test_feedback.py` - Terminal feedback system
@@ -95,7 +95,7 @@ For real LLM responses, see `API_SETUP.md` for detailed instructions on:
 
 ## 🎉 Status: Assignment Complete
 
-**✅ Kauthara's A2C Model**: Fully implemented and tested
+**✅ A2C Model**: Fully implemented and tested
 **✅ Real-Time Learning**: Working with human feedback
 **✅ Team Integration**: Ready for handoff
 

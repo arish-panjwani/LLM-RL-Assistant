@@ -40,7 +40,8 @@ async function optimizePrompt() {
         });
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
         
         const result = await response.json();
@@ -52,7 +53,11 @@ async function optimizePrompt() {
         }
         
     } catch (err) {
-        showError(`Failed to optimize prompt: ${err.message}`);
+        if (err.message.includes('Failed to fetch')) {
+            showError('Cannot connect to API server. Make sure the server is running on port 8000.');
+        } else {
+            showError(`Failed to optimize prompt: ${err.message}`);
+        }
         console.error('Error:', err);
     } finally {
         hideLoading();
@@ -61,10 +66,21 @@ async function optimizePrompt() {
 
 // Display results
 function displayResults(result) {
+    console.log('API Response:', result); // Debug log
+    
     // Update DOM elements
     document.getElementById('originalPrompt').textContent = result.original_prompt || 'N/A';
     document.getElementById('optimizedPrompt').textContent = result.optimized_prompt || 'N/A';
-    document.getElementById('llmResponse').textContent = result.llm_response || 'No response available';
+    
+    // Check if response exists and is not empty (same logic as Streamlit)
+    const response = result.response || result.llm_response || '';
+    console.log('Response to display:', response); // Debug log
+    
+    if (response && response.trim() !== '' && response !== 'No response available') {
+        document.getElementById('llmResponse').textContent = response;
+    } else {
+        document.getElementById('llmResponse').textContent = 'No response available';
+    }
     
     // Update metrics if available
     if (result.metrics) {

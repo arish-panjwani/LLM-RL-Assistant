@@ -16,6 +16,8 @@ from server.deployment_server import DeploymentServer
 from data.data_loader import DataLoader
 from environment.reward_calculator import RewardCalculator
 from models.ppo.ppo_trainer import PPOTrainer
+from utils.groq_client import GroqClient
+from environment.prompt_env import PromptOptimizationEnv
 
 # Configure logging
 logging.basicConfig(
@@ -43,37 +45,100 @@ def train_models(config: Config, args):
     """Train RL models"""
     logger.info("Starting model training...")
     
-    # For now, we need to create an environment function
-    # This is a placeholder - you'll need to implement the actual environment
-    def create_env():
-        from environment.prompt_env import PromptOptimizationEnv
-        from utils.groq_client import GroqClient
-        from environment.reward_calculator import RewardCalculator
-        from data.data_loader import DataLoader
+    try:
+        def create_env():
+            groq_client = GroqClient(config.GROQ_API_KEY)
+            reward_calculator = RewardCalculator(groq_client, config)
+            data_loader = DataLoader()
+            
+            try:
+                persona_data, hh_data, truth_data = data_loader.load_training_data()
+                
+                # Convert data format to match expected structure
+                formatted_data = []
+                
+                # Process persona data with error checking and better field access
+                for item in persona_data:
+                    if isinstance(item, dict):
+                        prompt = ""
+                        # Try different possible field names
+                        for field in ["prompt", "query", "text", "question"]:
+                            if field in item and item[field]:
+                                prompt = str(item[field])
+                                break
+                        
+                        if prompt:  # Only add if we found a valid prompt
+                            formatted_data.append({
+                                "prompt": prompt,
+                                "context": str(item.get("context", "general")),
+                                "depth": "intermediate",
+                                "type": "conversation"
+                            })
+                
+                # Process HH data with error checking
+                for item in hh_data:
+                    if isinstance(item, dict):
+                        prompt = ""
+                        for field in ["prompt", "text", "input"]:
+                            if field in item and item[field]:
+                                prompt = str(item[field])
+                                break
+                                
+                        if prompt:
+                            formatted_data.append({
+                                "prompt": prompt,
+                                "context": "practical",
+                                "depth": str(item.get("depth", "beginner")),
+                                "type": "feedback"
+                            })
+                
+                # Process truth data with error checking
+                for item in truth_data:
+                    if isinstance(item, dict):
+                        prompt = ""
+                        for field in ["prompt", "question", "input"]:
+                            if field in item and item[field]:
+                                prompt = str(item[field])
+                                break
+                                
+                        if prompt:
+                            formatted_data.append({
+                                "prompt": prompt,
+                                "context": "factual",
+                                "depth": "expert",
+                                "type": "factual"
+                            })
+                
+                # Validate and prepare training data
+                test_data = [d for d in formatted_data if d["prompt"].strip()][:100]
+                
+                if not test_data:
+                    raise ValueError("No valid training data available")
+                
+                logger.info(f"Successfully formatted {len(test_data)} training samples")
+                if test_data:
+                    logger.debug(f"Sample prompt: {test_data[0]['prompt']}")
+                
+                return PromptOptimizationEnv(groq_client, reward_calculator, test_data, config)
+                
+            except Exception as e:
+                logger.error(f"Error processing training data: {str(e)}")
+                raise
         
-        groq_client = GroqClient(config.GROQ_API_KEY)
-        reward_calculator = RewardCalculator(groq_client, config)
-        data_loader = DataLoader()
-        persona_data, hh_data, truth_data = data_loader.load_training_data()
-        test_data = (persona_data + hh_data + truth_data)[:100]
+        trainer = PPOTrainer(config, env_fn=create_env)
+        trained_model = trainer.train()
+        logger.info("Training completed successfully!")
+        return trained_model
         
-        return PromptOptimizationEnv(groq_client, reward_calculator, test_data, config)
-    
-    # Initialize trainer with environment function
-    trainer = PPOTrainer(config, env_fn=create_env)
-    
-    # Train the model
-    trained_model = trainer.train()
-    
-    logger.info("Training completed successfully!")
-    return trained_model
+    except Exception as e:
+        logger.error(f"Training error: {e}")
+        raise
 
 def evaluate_models(config: Config):
     """Evaluate all available models"""
     logger.info("Starting model evaluation...")
     
     # Initialize components
-    from utils.groq_client import GroqClient
     groq_client = GroqClient(config.GROQ_API_KEY)
     data_loader = DataLoader()
     reward_calculator = RewardCalculator(groq_client, config)
@@ -137,7 +202,6 @@ def test_system(config: Config):
         
         # Test Groq client
         logger.info("Testing Groq client...")
-        from utils.groq_client import GroqClient
         groq_client = GroqClient(config.GROQ_API_KEY)
         response = groq_client.get_response("Test prompt")
         assert isinstance(response, str), "Groq client test failed"
@@ -152,7 +216,6 @@ def test_system(config: Config):
         
         # Test environment
         logger.info("Testing environment...")
-        from environment.prompt_env import PromptOptimizationEnv
         env = PromptOptimizationEnv(
             groq_client, reward_calculator, 
             persona_data[:10], config

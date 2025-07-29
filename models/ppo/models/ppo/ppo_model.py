@@ -16,18 +16,26 @@ class PPOModel:
     
     def _load_model(self):
         """Load trained PPO model"""
-        model_path = f"{self.config.MODEL_SAVE_PATH}PPO_final.zip"
+        # Try multiple possible model paths
+        possible_paths = [
+            os.path.join(self.config.MODEL_SAVE_PATH, "PPO_final.zip"),
+            os.path.join(self.config.MODEL_SAVE_PATH, "PPO_best", "best_model.zip"),
+            os.path.join(self.config.MODEL_SAVE_PATH, "ppo", "ppo_model.zip")
+        ]
         
-        if os.path.exists(model_path):
-            try:
-                self.model = PPO.load(model_path)
-                logger.info("Loaded PPO model successfully")
-            except Exception as e:
-                logger.error(f"Error loading PPO model: {e}")
-                self.model = None
-        else:
-            logger.warning(f"Model file not found: {model_path}. Model will be loaded when available.")
-            self.model = None
+        for model_path in possible_paths:
+            if os.path.exists(model_path):
+                try:
+                    self.model = PPO.load(model_path)
+                    logger.info(f"Loaded PPO model successfully from: {model_path}")
+                    return
+                except Exception as e:
+                    logger.error(f"Error loading PPO model from {model_path}: {e}")
+                    continue
+        
+        # If no model found, log warning
+        logger.warning(f"No PPO model found in any of these paths: {possible_paths}")
+        self.model = None
     
     def optimize_prompt(self, embedding: np.ndarray) -> np.ndarray:
         """

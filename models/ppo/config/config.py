@@ -10,12 +10,19 @@ except ImportError:
     # If python-dotenv is not installed, continue without it
     pass
 
+# Project root (one level up from this file)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+MODEL_SAVE_PATH = os.path.join(PROJECT_ROOT, "models")
+LOG_PATH = os.path.join(PROJECT_ROOT, "logs")
+TENSORBOARD_PATH = os.path.join(PROJECT_ROOT, "tensorboard_logs")
+
 @dataclass
 class Config:
     # API Keys (read from environment variable)
     GROQ_API_KEY: str = os.getenv('GROQ_API_KEY', '')
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", None)
-    WOLFRAM_APP_ID = os.getenv("WOLFRAM_APP_ID", None)
+    WOLFRAM_APP_ID = os.getenv("WOLFRAM_APP_ID", '')
 
     # Model parameters
     EMBEDDING_DIM: int = 384
@@ -33,9 +40,10 @@ class Config:
 
     # Reward weights
     CLARITY_WEIGHTS: Dict[str, float] = field(default_factory=lambda: {
-        'lambda1': 0.4,
-        'lambda2': 0.3,
-        'lambda3': 0.3
+        'lambda1': 0.3,  # Similarity weight
+        'lambda2': 0.2,  # Redundancy penalty weight
+        'lambda3': 0.3,  # LLM rating weight
+        'lambda4': 0.2   # Strategy diversity weight
     })
     RELEVANCE_WEIGHTS: Dict[str, float] = field(default_factory=lambda: {
         'alpha': 0.6,
@@ -45,10 +53,10 @@ class Config:
         'gamma': 0.5
     })
 
-    # Paths
-    MODEL_SAVE_PATH: str = "./models/"
-    LOG_PATH: str = "./logs/"
-    TENSORBOARD_PATH: str = "./tensorboard_logs/"
+    # Paths (absolute)
+    MODEL_SAVE_PATH: str = MODEL_SAVE_PATH
+    LOG_PATH: str = LOG_PATH
+    TENSORBOARD_PATH: str = TENSORBOARD_PATH
 
 # Create a global config instance
 config = Config()

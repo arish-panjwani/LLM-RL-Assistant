@@ -12,11 +12,31 @@ from datetime import datetime
 # Configuration
 API_BASE_URL = "http://localhost:8000"
 TEST_PROMPTS = [
-    "What is machine learning?",
-    "Explain quantum computing",
-    "How does photosynthesis work?",
-    "Tell me about climate change",
-    "What is artificial intelligence?"
+    {
+        "prompt": "What is machine learning?",
+        "context": "academic",
+        "depth": "intermediate"
+    },
+    {
+        "prompt": "Explain quantum computing",
+        "context": "practical",
+        "depth": "beginner"
+    },
+    {
+        "prompt": "How does photosynthesis work?",
+        "context": "scientific",
+        "depth": "detailed"
+    },
+    {
+        "prompt": "Tell me about climate change",
+        "context": "current_events",
+        "depth": "comprehensive"
+    },
+    {
+        "prompt": "What is artificial intelligence?",
+        "context": "technical",
+        "depth": "expert"
+    }
 ]
 
 def test_health_endpoint():
@@ -51,13 +71,19 @@ def test_model_info_endpoint():
         print(f"❌ Model info error: {e}")
         return False
 
-def test_optimize_prompt_endpoint(prompt):
-    """Test the optimize prompt endpoint"""
-    print(f"\n🔍 Testing Optimize Prompt: '{prompt[:50]}...'")
+def test_optimize_prompt_endpoint(prompt_data):
+    """Test the optimize prompt endpoint with enhanced context"""
+    print(f"\n🔍 Testing Optimize Prompt: '{prompt_data['prompt'][:50]}...'")
     try:
+        # Include context and depth in request
         response = requests.post(
             f"{API_BASE_URL}/optimize_prompt",
-            json={"prompt": prompt},
+            json={
+                "prompt": prompt_data["prompt"],
+                "context": prompt_data.get("context", "general"),
+                "depth": prompt_data.get("depth", "intermediate"),
+                "optimization_style": get_optimization_style(prompt_data)
+            },
             timeout=30
         )
         
@@ -66,15 +92,54 @@ def test_optimize_prompt_endpoint(prompt):
             if data.get('success'):
                 print(f"✅ Optimization successful!")
                 print(f"   Original: {data.get('original_prompt', 'N/A')}")
+                print(f"   Context: {prompt_data.get('context', 'general')}")
+                print(f"   Depth: {prompt_data.get('depth', 'intermediate')}")
                 print(f"   Optimized: {data.get('optimized_prompt', 'N/A')}")
-                print(f"   Response: {data.get('llm_response', 'N/A')[:100]}...")
+                print(f"   Response: {data.get('response', 'N/A')[:100]}...")
                 
-                # Show metrics if available
+                # Check if using fallback mode
+                if data.get('using_fallback', False):
+                    print(f"   ⚠️ Using fallback mode (no API key)")
+                else:
+                    print(f"   ✅ Using full LLM integration")
+                
+                # Enhanced pattern validation
+                optimization_patterns = [
+                    "Please provide",
+                    "Explain in detail",
+                    "Compare and contrast",
+                    "Analyze the concept of",
+                    "What are the fundamental principles of",
+                    "How would you describe",
+                    "Can you elaborate on",
+                    "Describe the mechanisms behind",
+                    "What are the key aspects of",
+                    "In the context of"
+                ]
+                
+                optimized = data.get('optimized_prompt', '').lower()
+                pattern_matched = False
+                matched_patterns = []
+                
+                for pattern in optimization_patterns:
+                    if pattern.lower() in optimized:
+                        pattern_matched = True
+                        matched_patterns.append(pattern)
+                
+                if not pattern_matched:
+                    print("   ⚠️ Warning: No recognized optimization pattern found")
+                elif len(matched_patterns) == 1 and "Please provide" in matched_patterns:
+                    print("   ⚠️ Warning: Using basic optimization pattern")
+                
+                # Show enhanced metrics with diversity score
                 if 'metrics' in data:
                     metrics = data['metrics']
-                    print(f"   Metrics: Clarity={metrics.get('clarity_score', 0):.3f}, "
-                          f"Relevance={metrics.get('relevance_score', 0):.3f}, "
-                          f"Hallucination={metrics.get('hallucination_penalty', 0):.3f}")
+                    diversity_score = len(matched_patterns) / len(optimization_patterns)
+                    print(f"   Metrics:")
+                    print(f"     Clarity: {metrics.get('clarity_score', 0):.3f}")
+                    print(f"     Relevance: {metrics.get('relevance_score', 0):.3f}")
+                    print(f"     Hallucination: {metrics.get('hallucination_penalty', 0):.3f}")
+                    print(f"     Diversity: {diversity_score:.3f}")
                 return True
             else:
                 print(f"❌ Optimization failed: {data.get('error', 'Unknown error')}")
@@ -86,30 +151,53 @@ def test_optimize_prompt_endpoint(prompt):
         print(f"❌ Request error: {e}")
         return False
 
+def get_optimization_style(prompt_data):
+    """Get optimization style based on context and depth"""
+    context = prompt_data.get("context", "general")
+    depth = prompt_data.get("depth", "intermediate")
+    
+    styles = {
+        ("academic", "expert"): "analytical",
+        ("scientific", "detailed"): "technical",
+        ("practical", "beginner"): "simplified",
+        ("current_events", "comprehensive"): "contextual",
+        ("technical", "expert"): "advanced"
+    }
+    
+    return styles.get((context, depth), "standard")
+
 def test_batch_optimization():
     """Test batch optimization with multiple prompts"""
     print(f"\n🔍 Testing Batch Optimization ({len(TEST_PROMPTS)} prompts)...")
     
     results = []
+    optimization_patterns = set()
     start_time = time.time()
     
-    for i, prompt in enumerate(TEST_PROMPTS, 1):
+    for i, prompt_data in enumerate(TEST_PROMPTS, 1):
         print(f"\n--- Test {i}/{len(TEST_PROMPTS)} ---")
-        success = test_optimize_prompt_endpoint(prompt)
+        success = test_optimize_prompt_endpoint(prompt_data)
         results.append(success)
         
-        # Small delay between requests
+        # Track optimization patterns
+        if success:
+            pattern = prompt_data.get('optimized_prompt', '')[:30]
+            optimization_patterns.add(pattern)
+        
         if i < len(TEST_PROMPTS):
             time.sleep(1)
     
     end_time = time.time()
     total_time = end_time - start_time
     
+    # Enhanced results reporting
     print(f"\n📊 Batch Test Results:")
     print(f"   Total tests: {len(TEST_PROMPTS)}")
     print(f"   Successful: {sum(results)}")
     print(f"   Failed: {len(TEST_PROMPTS) - sum(results)}")
     print(f"   Success rate: {sum(results)/len(TEST_PROMPTS)*100:.1f}%")
+    print(f"   Unique patterns: {len(optimization_patterns)}")
+    print(f"   Pattern diversity: {len(optimization_patterns)/len(TEST_PROMPTS)*100:.1f}%")
     print(f"   Total time: {total_time:.2f} seconds")
     print(f"   Average time per request: {total_time/len(TEST_PROMPTS):.2f} seconds")
     
@@ -186,6 +274,15 @@ def generate_test_report():
         print("\n⚠️ Some tests failed. Check the API server and model files.")
         print("Make sure to run: docker-compose up --build")
     
+    # API Key Status
+    print("\n🔑 API KEY STATUS")
+    print("="*60)
+    print("If you're seeing fallback mode messages, you need to set up your API key:")
+    print("1. Get a Groq API key from: https://console.groq.com/")
+    print("2. Set the environment variable: GROQ_API_KEY=your_key_here")
+    print("3. Restart the Docker container: docker-compose down && docker-compose up --build")
+    print("4. See API_SETUP.md for detailed instructions")
+    
     print("="*60)
 
 def main():
@@ -202,4 +299,4 @@ def main():
         print(f"\n\n❌ Testing failed with error: {e}")
 
 if __name__ == "__main__":
-    main() 
+    main()

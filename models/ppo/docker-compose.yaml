@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   rl-prompt-optimizer:
     build: .

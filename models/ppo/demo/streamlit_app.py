@@ -157,7 +157,56 @@ def main():
             
             # LLM Response
             st.markdown("### 🤖 LLM Response")
-            st.markdown(result.get('llm_response', 'No response available'))
+            llm_response = result.get('response', 'No response available')
+            if llm_response and llm_response != 'No response available':
+                st.markdown(llm_response)
+            else:
+                st.warning("No response available")
+            
+            # Show API and PPO status
+            col_status1, col_status2 = st.columns(2)
+            
+            with col_status1:
+                if result.get('using_fallback', False):
+                    st.info("⚠️ Using fallback mode (no API key or API unavailable)")
+                else:
+                    st.success("✅ Using full LLM integration")
+            
+            with col_status2:
+                if result.get('ppo_used', False):
+                    st.success("🧠 Using trained PPO model")
+                else:
+                    st.info("📝 Using template optimization")
+            
+            # Show API sources if available
+            api_sources = result.get('api_sources', [])
+            if api_sources:
+                st.markdown("### 🔗 API Sources")
+                for source in api_sources:
+                    st.success(f"✅ {source}")
+            
+            # Enhanced response display
+            st.markdown("### 🤖 Enhanced Response")
+            llm_response = result.get('response', 'No response available')
+            if llm_response and llm_response != 'No response available':
+                # Split response into sections if it contains multiple parts
+                if "📚 **Factual Information:**" in llm_response or "🧮 **Computational Data:**" in llm_response:
+                    # Display as separate sections
+                    parts = llm_response.split("\n\n")
+                    for i, part in enumerate(parts):
+                        if part.strip():
+                            if "📚 **Factual Information:**" in part:
+                                st.markdown("#### 📚 Factual Information")
+                                st.markdown(part.replace("📚 **Factual Information:**", ""))
+                            elif "🧮 **Computational Data:**" in part:
+                                st.markdown("#### 🧮 Computational Data")
+                                st.markdown(part.replace("🧮 **Computational Data:**", ""))
+                            else:
+                                st.markdown(part)
+                else:
+                    st.markdown(llm_response)
+            else:
+                st.warning("No response available")
             
             # Metrics
             if 'metrics' in result:
@@ -189,8 +238,28 @@ def main():
             
             # Model info
             st.markdown("### 🔧 Model Information")
+            
+            # Get model info from API
+            try:
+                model_response = requests.get("http://localhost:8000/model_info", timeout=5)
+                if model_response.status_code == 200:
+                    model_info = model_response.json()
+                    ppo_available = model_info.get('ppo_available', False)
+                    groq_available = model_info.get('groq_available', False)
+                    google_available = model_info.get('google_available', False)
+                    wolfram_available = model_info.get('wolfram_available', False)
+                else:
+                    ppo_available = groq_available = google_available = wolfram_available = False
+            except:
+                ppo_available = groq_available = google_available = wolfram_available = False
+            
             st.json({
                 "model_used": result.get('model_used', 'PPO'),
+                "ppo_available": ppo_available,
+                "ppo_used": result.get('ppo_used', False),
+                "groq_available": groq_available,
+                "google_available": google_available,
+                "wolfram_available": wolfram_available,
                 "timestamp": st.session_state.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                 "success": result.get('success', False)
             })

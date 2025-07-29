@@ -44,7 +44,8 @@ class PromptOptimizationEnv(gym.Env):
         
         # Select random training data point
         self.current_data_point = np.random.choice(self.training_data)
-        self.current_query = self.current_data_point['query']
+        # Use 'prompt' instead of 'query'
+        self.current_query = self.current_data_point['prompt']
         
         # Get embedding for current query
         self.original_embedding = self.reward_calculator.embedding_model.encode([self.current_query])[0]
@@ -56,21 +57,25 @@ class PromptOptimizationEnv(gym.Env):
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, Dict]:
         """Execute action and return results"""
         
-        # Apply action to modify prompt embedding
-        modified_embedding = self.original_embedding + action * 0.1  # Scale action
-        
-        # Convert modified embedding back to prompt (simplified approach)
+        # Apply action to modify embedding
+        modified_embedding = self.original_embedding + action * 0.1
+
+        # Get LLM-optimized prompt
         modified_prompt = self._embedding_to_prompt(modified_embedding)
         
-        # Get response from Groq
+        # Get response for the optimized prompt
         response = self.groq_client.get_response(modified_prompt)
         
-        # Calculate reward
-        reward = self.reward_calculator.calculate_total_reward(
-            self.current_query, modified_prompt, response
+        # Calculate meta-reward for prompt optimization quality
+        meta_reward = self.reward_calculator.calculate_total_reward(
+            self.current_query,
+            modified_prompt,
+            response,
+            context=self.current_data_point.get('context'),
+            depth=self.current_data_point.get('depth')
         )
         
-        # Episode is done after one step
+        # Episode ends after one step
         terminated = True
         truncated = False
         
@@ -78,30 +83,60 @@ class PromptOptimizationEnv(gym.Env):
             'original_prompt': self.current_query,
             'modified_prompt': modified_prompt,
             'response': response,
-            'reward_breakdown': {
-                'clarity': self.reward_calculator.calculate_clarity_reward(self.current_query, modified_prompt),
-                'relevance': self.reward_calculator.calculate_relevance_reward(self.current_query, response),
-                'hallucination_penalty': self.reward_calculator.calculate_hallucination_penalty(response)
-            }
+            'meta_prompt_used': True,
+            'context': self.current_data_point.get('context'),
+            'depth': self.current_data_point.get('depth')
         }
         
-        return modified_embedding.astype(np.float32), reward, terminated, truncated, info
+        return modified_embedding.astype(np.float32), meta_reward, terminated, truncated, info
     
     def _embedding_to_prompt(self, embedding: np.ndarray) -> str:
-        """Convert embedding back to prompt (simplified approach)"""
-        # This is a simplified approach - in practice, you might use more sophisticated methods
-        # For now, we'll modify the original prompt based on embedding changes
+        """Use LLM to dynamically generate optimized prompts"""
         
+        # Get context and depth
+        context = self.current_data_point.get('context', 'general')
+        depth = self.current_data_point.get('depth', 'intermediate')
+        
+        # Calculate embedding similarity for strategy selection
         similarity = np.dot(embedding, self.original_embedding) / (
             np.linalg.norm(embedding) * np.linalg.norm(self.original_embedding)
         )
         
-        if similarity > 0.95:
-            # High similarity - minor modifications
-            return f"Please provide a clear and specific answer to: {self.current_query}"
-        elif similarity > 0.8:
-            # Medium similarity - moderate modifications
-            return f"Can you explain in detail: {self.current_query}"
-        else:
-            # Low similarity - major modifications
-            return f"I need comprehensive information about: {self.current_query}"
+        # Create dynamic meta-prompt based on context and depth
+        meta_prompt = f"""As an expert prompt engineer, optimize this query: "{self.current_query}"
+
+Context: {context}
+Depth: {depth}
+Optimization Goals:
+1. Generate a prompt appropriate for {depth} level understanding
+2. Focus on {context} context and applications
+3. Use varied and engaging language
+4. Maintain technical accuracy
+5. Encourage detailed, structured responses
+
+Requirements:
+- Do NOT start with "Please provide"
+- Use diverse prompt structures
+- Match the complexity to the {depth} level
+- Maintain focus on {context} aspects
+- Encourage analytical thinking
+
+Generate only the optimized prompt, no additional text."""
+
+        # Get optimized prompt from LLM
+        optimized_prompt = self.groq_client.get_response(meta_prompt).strip()
+        
+        # Validate and fallback if needed
+        if not optimized_prompt or len(optimized_prompt) < 20:
+            # Use context-aware fallback patterns
+            patterns = {
+                ('academic', 'expert'): f"Analyze the theoretical foundations and advanced implications of {self.current_query}",
+                ('scientific', 'detailed'): f"Examine the mechanisms and processes involved in {self.current_query}",
+                ('technical', 'expert'): f"Evaluate the architectural components and technical implementation of {self.current_query}",
+                ('practical', 'beginner'): f"In simple terms, explain how {self.current_query} works and its everyday applications",
+                ('current_events', 'comprehensive'): f"Analyze the current state, implications, and future trends of {self.current_query}"
+            }
+            
+            return patterns.get((context, depth), f"Explain the key concepts and applications of {self.current_query}")
+            
+        return optimized_prompt

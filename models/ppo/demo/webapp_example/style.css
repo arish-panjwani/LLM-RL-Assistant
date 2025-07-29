@@ -255,6 +255,8 @@ header p {
     }
 }
 
+
+
 /* Success animations */
 .success-animation {
     animation: successPulse 0.5s ease-in-out;

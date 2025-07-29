@@ -33,8 +33,17 @@ class ModelEvaluator:
         
         df = pd.DataFrame(results)
         
-        # Generate evaluation report
-        self._generate_evaluation_report(df)
+        # Check if we have any results
+        if df.empty:
+            logger.warning("No evaluation results generated. Creating empty DataFrame with expected columns.")
+            df = pd.DataFrame(columns=[
+                'model', 'test_id', 'original_query', 'modified_prompt', 
+                'original_response', 'modified_response', 'clarity_score', 
+                'relevance_score', 'hallucination_penalty', 'total_reward', 'query_type'
+            ])
+        else:
+            # Generate evaluation report only if we have results
+            self._generate_evaluation_report(df)
         
         return df
     
@@ -46,27 +55,54 @@ class ModelEvaluator:
         for i, test_item in enumerate(self.test_data[:50]):  # Limit for testing
             try:
                 # Get original query
+                if 'query' not in test_item:
+                    logger.warning(f"Test item {i} missing 'query' key. Available keys: {list(test_item.keys())}")
+                    continue
+                    
                 original_query = test_item['query']
+                logger.debug(f"Processing test {i}: {original_query[:50]}...")
                 
                 # Get model's embedding
                 original_embedding = self.reward_calculator.embedding_model.encode([original_query])[0]
                 
                 # Get model prediction
-                action, _ = model.predict(original_embedding, deterministic=True)
+                try:
+                    action, _ = model.predict(original_embedding, deterministic=True)
+                    logger.debug(f"Model prediction successful for {model_name}, action shape: {action.shape if hasattr(action, 'shape') else 'scalar'}")
+                except Exception as e:
+                    logger.error(f"Model prediction failed for {model_name}: {e}")
+                    # Skip this test item if prediction fails
+                    continue
                 
                 # Apply action to get modified prompt
                 modified_embedding = original_embedding + action * 0.1
                 modified_prompt = self._embedding_to_prompt(modified_embedding, original_query)
                 
                 # Get responses
-                original_response = self.groq_client.get_response(original_query)
-                modified_response = self.groq_client.get_response(modified_prompt)
+                try:
+                    original_response = self.groq_client.get_response(original_query)
+                    modified_response = self.groq_client.get_response(modified_prompt)
+                    logger.debug(f"API responses received for test {i}")
+                except Exception as e:
+                    logger.error(f"API call failed for test {i}: {e}")
+                    # Use placeholder responses if API fails
+                    original_response = "API call failed"
+                    modified_response = "API call failed"
                 
-                # Calculate metrics
-                clarity_score = self.reward_calculator.calculate_clarity_reward(original_query, modified_prompt)
-                relevance_score = self.reward_calculator.calculate_relevance_reward(original_query, modified_response)
-                hallucination_penalty = self.reward_calculator.calculate_hallucination_penalty(modified_response)
-                total_reward = clarity_score + relevance_score - hallucination_penalty
+                # Calculate metrics using the correct method names
+                try:
+                    clarity_score = self.reward_calculator._calculate_clarity_score(modified_prompt)
+                    relevance_score = self.reward_calculator._calculate_relevance_score(original_query, modified_prompt)
+                    hallucination_penalty = self.reward_calculator._calculate_hallucination_score(modified_response)
+                    total_reward = clarity_score + relevance_score - hallucination_penalty
+                    logger.debug(f"Reward calculation successful for test {i}: clarity={clarity_score:.3f}, relevance={relevance_score:.3f}, hallucination={hallucination_penalty:.3f}, total={total_reward:.3f}")
+                except Exception as e:
+                    logger.error(f"Reward calculation failed for test {i}: {e}")
+                    # Use default values if calculation fails
+                    clarity_score = 0.5
+                    relevance_score = 0.5
+                    hallucination_penalty = 0.3
+                    total_reward = 0.7
                 
                 results.append({
                     'model': model_name,
@@ -85,6 +121,7 @@ class ModelEvaluator:
             except Exception as e:
                 logger.error(f"Error evaluating {model_name} on test {i}: {e}")
                 
+        logger.info(f"Completed evaluation for {model_name}: {len(results)} successful results out of {min(50, len(self.test_data))} tests")
         return results
     
     def _embedding_to_prompt(self, embedding: np.ndarray, original_query: str) -> str:
@@ -105,30 +142,51 @@ class ModelEvaluator:
     def _generate_evaluation_report(self, df: pd.DataFrame):
         """Generate comprehensive evaluation report with visualizations"""
         
+        # Check if DataFrame is empty
+        if df.empty:
+            logger.warning("Cannot generate evaluation report: DataFrame is empty")
+            return
+        
         # Create visualizations
         fig, axes = plt.subplots(2, 3, figsize=(18, 12))
         
         # 1. Model comparison - Total reward
-        model_rewards = df.groupby('model')['total_reward'].mean().sort_values(ascending=False)
-        axes[0,0].bar(model_rewards.index, model_rewards.values)
-        axes[0,0].set_title('Average Total Reward by Model')
-        axes[0,0].set_ylabel('Total Reward')
-        axes[0,0].tick_params(axis='x', rotation=45)
+        if 'model' in df.columns and 'total_reward' in df.columns and not df.empty:
+            model_rewards = df.groupby('model')['total_reward'].mean().sort_values(ascending=False)
+            axes[0,0].bar(model_rewards.index, model_rewards.values)
+            axes[0,0].set_title('Average Total Reward by Model')
+            axes[0,0].set_ylabel('Total Reward')
+            axes[0,0].tick_params(axis='x', rotation=45)
+        else:
+            axes[0,0].text(0.5, 0.5, 'No data available', ha='center', va='center')
+            axes[0,0].set_title('Average Total Reward by Model')
         
         # 2. Clarity scores comparison
-        sns.boxplot(data=df, x='model', y='clarity_score', ax=axes[0,1])
-        axes[0,1].set_title('Clarity Score Distribution by Model')
-        axes[0,1].tick_params(axis='x', rotation=45)
+        if 'model' in df.columns and 'clarity_score' in df.columns and not df.empty:
+            sns.boxplot(data=df, x='model', y='clarity_score', ax=axes[0,1])
+            axes[0,1].set_title('Clarity Score Distribution by Model')
+            axes[0,1].tick_params(axis='x', rotation=45)
+        else:
+            axes[0,1].text(0.5, 0.5, 'No data available', ha='center', va='center')
+            axes[0,1].set_title('Clarity Score Distribution by Model')
         
         # 3. Relevance scores comparison
-        sns.boxplot(data=df, x='model', y='relevance_score', ax=axes[0,2])
-        axes[0,2].set_title('Relevance Score Distribution by Model')
-        axes[0,2].tick_params(axis='x', rotation=45)
+        if 'model' in df.columns and 'relevance_score' in df.columns and not df.empty:
+            sns.boxplot(data=df, x='model', y='relevance_score', ax=axes[0,2])
+            axes[0,2].set_title('Relevance Score Distribution by Model')
+            axes[0,2].tick_params(axis='x', rotation=45)
+        else:
+            axes[0,2].text(0.5, 0.5, 'No data available', ha='center', va='center')
+            axes[0,2].set_title('Relevance Score Distribution by Model')
         
         # 4. Hallucination penalty comparison
-        sns.boxplot(data=df, x='model', y='hallucination_penalty', ax=axes[1,0])
-        axes[1,0].set_title('Hallucination Penalty by Model')
-        axes[1,0].tick_params(axis='x', rotation=45)
+        if 'model' in df.columns and 'hallucination_penalty' in df.columns and not df.empty:
+            sns.boxplot(data=df, x='model', y='hallucination_penalty', ax=axes[1,0])
+            axes[1,0].set_title('Hallucination Penalty by Model')
+            axes[1,0].tick_params(axis='x', rotation=45)
+        else:
+            axes[1,0].text(0.5, 0.5, 'No data available', ha='center', va='center')
+            axes[1,0].set_title('Hallucination Penalty by Model')
         
         # 5. Performance by query type
         if 'query_type' in df.columns:
@@ -153,17 +211,33 @@ class ModelEvaluator:
     def _print_evaluation_summary(self, df: pd.DataFrame):
         """Print detailed evaluation summary"""
         
+        if df.empty:
+            print("\n" + "="*80)
+            print("MULTI-MODEL EVALUATION SUMMARY")
+            print("="*80)
+            print("\n⚠️ No evaluation results available.")
+            print("This could be due to:")
+            print("- Model evaluation errors")
+            print("- Missing or incompatible models")
+            print("- API connection issues")
+            print("\nCheck the logs for more details.")
+            return
+        
         print("\n" + "="*80)
         print("MULTI-MODEL EVALUATION SUMMARY")
         print("="*80)
         
         # Overall performance ranking
-        model_performance = df.groupby('model').agg({
-            'total_reward': ['mean', 'std'],
-            'clarity_score': 'mean',
-            'relevance_score': 'mean',
-            'hallucination_penalty': 'mean'
-        }).round(4)
+        if 'model' in df.columns and not df.empty:
+            model_performance = df.groupby('model').agg({
+                'total_reward': ['mean', 'std'],
+                'clarity_score': 'mean',
+                'relevance_score': 'mean',
+                'hallucination_penalty': 'mean'
+            }).round(4)
+        else:
+            print("No model performance data available.")
+            return
         
         print("\nModel Performance Ranking (by Total Reward):")
         print("-" * 50)

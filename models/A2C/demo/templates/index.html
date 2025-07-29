@@ -1,0 +1,488 @@
+{% extends "base.html" %}
+
+{% block title %}A2C Prompt Optimizer - Home{% endblock %}
+
+{% block content %}
+<style>
+    .metrics-grid {
+        display: grid;
+        gap: 10px;
+    }
+    
+    .metric-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 5px;
+    }
+    
+    .metric-label {
+        font-weight: 500;
+        color: #6c757d;
+    }
+    
+    .metric-value {
+        font-weight: bold;
+        color: #0d6efd;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -40px;
+        top: 15px;
+        width: 25px;
+        height: 25px;
+        background: #0d6efd;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 12px;
+    }
+    
+    .timeline-content {
+        margin-left: 10px;
+    }
+    
+    .response-content {
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 5px;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+</style>
+<div class="hero-section text-center">
+    <h1 class="display-4 fw-bold mb-3">
+        <i class="fas fa-brain text-primary me-3"></i>
+        A2C Prompt Optimization System
+    </h1>
+    <p class="lead mb-4">
+        Experience the power of Actor-Critic reinforcement learning in dynamic prompt optimization.
+        Transform your prompts with AI-driven improvements.
+    </p>
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-magic me-2"></i>Optimize Your Prompt
+                    </h5>
+                    <form id="optimizeForm">
+                        <div class="mb-3">
+                            <textarea 
+                                class="form-control" 
+                                id="promptInput" 
+                                rows="4" 
+                                placeholder="Enter your prompt here... (e.g., 'What is machine learning?')"
+                                required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg w-100" id="optimizeBtn">
+                            <span class="btn-text">
+                                <i class="fas fa-wand-magic-sparkles me-2"></i>Optimize Prompt
+                            </span>
+                            <span class="loading">
+                                <span class="spinner-border spinner-border-sm me-2"></span>Optimizing...
+                            </span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Section -->
+<div id="resultsSection" class="mb-4" style="display: none;">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card result-card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-file-alt me-2"></i>Original Prompt
+                    </h6>
+                    <p class="card-text" id="originalPrompt"></p>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-secondary me-2">Score:</span>
+                        <span id="originalScore" class="fw-bold"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card result-card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-star me-2"></i>Optimized Prompt
+                    </h6>
+                    <p class="card-text" id="optimizedPrompt"></p>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="badge bg-success me-2">Score:</span>
+                            <span id="optimizedScore" class="fw-bold"></span>
+                        </div>
+                        <span class="action-badge" id="actionTaken"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Improvement Section -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card result-card">
+                <div class="card-body text-center">
+                    <h6 class="card-title">
+                        <i class="fas fa-chart-line me-2"></i>Improvement
+                    </h6>
+                    <div id="improvementValue" class="fs-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Metrics Comparison -->
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div class="card result-card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-chart-bar me-2"></i>Original Metrics
+                    </h6>
+                    <div id="originalMetrics" class="metrics-grid"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card result-card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-chart-bar me-2"></i>Optimized Metrics
+                    </h6>
+                    <div id="optimizedMetrics" class="metrics-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- LLM Responses Section -->
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div class="card result-card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-comment me-2"></i>Original Response
+                    </h6>
+                    <div class="response-content" id="originalResponse"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card result-card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-comment-dots me-2"></i>Optimized Response
+                    </h6>
+                    <div class="response-content" id="optimizedResponse"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Optimization History -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card result-card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-history me-2"></i>Optimization History
+                    </h6>
+                    <div id="optimizationHistory"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="row mb-3">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="feature-icon mx-auto">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h5 class="card-title">Actor-Critic Model</h5>
+                <p class="card-text">
+                    Advanced reinforcement learning using A2C architecture for intelligent prompt optimization.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="feature-icon mx-auto">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <h5 class="card-title">Real-time Evaluation</h5>
+                <p class="card-text">
+                    Instant scoring and improvement metrics with comprehensive evaluation algorithms.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="feature-icon mx-auto">
+                    <i class="fas fa-history"></i>
+                </div>
+                <h5 class="card-title">Optimization History</h5>
+                <p class="card-text">
+                    Track your optimization history and see how the model improves over time.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- History Section -->
+<div id="historySection" class="mb-3" style="display: none;">
+    <h4 class="mb-2">
+        <i class="fas fa-history me-2"></i>Recent Optimizations
+    </h4>
+    <div id="historyList"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load history on page load
+    loadHistory();
+    
+    document.getElementById('optimizeForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const prompt = document.getElementById('promptInput').value.trim();
+        if (!prompt) {
+            showAlert('Please enter a prompt to optimize.', 'warning');
+            return;
+        }
+        
+        // Show loading state
+        const btn = document.getElementById('optimizeBtn');
+        btn.disabled = true;
+        btn.querySelector('.btn-text').style.display = 'none';
+        btn.querySelector('.loading').style.display = 'inline-block';
+        
+        try {
+            const response = await fetch('/optimize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ prompt: prompt })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.status === 'success') {
+                // Display results
+                document.getElementById('originalPrompt').textContent = data.original_prompt;
+                document.getElementById('optimizedPrompt').textContent = data.optimized_prompt;
+                document.getElementById('originalScore').textContent = data.initial_score;
+                document.getElementById('optimizedScore').textContent = data.final_score;
+                document.getElementById('actionTaken').textContent = data.action_name.replace('_', ' ').toUpperCase();
+                document.getElementById('originalResponse').textContent = data.original_response;
+                document.getElementById('optimizedResponse').textContent = data.optimized_response;
+                
+                // Show improvement
+                const improvement = data.improvement;
+                const improvementText = improvement >= 0 ? `+${improvement}` : `${improvement}`;
+                const improvementColor = improvement >= 0 ? 'success' : 'danger';
+                
+                document.getElementById('improvementValue').innerHTML = `
+                    <span class="badge bg-${improvementColor} fs-6">
+                        ${improvementText} Improvement
+                    </span>
+                `;
+                
+                // Display metrics
+                displayMetrics('originalMetrics', data.original_metrics);
+                displayMetrics('optimizedMetrics', data.optimized_metrics);
+                
+                // Display optimization history
+                displayOptimizationHistory(data.optimization_history, data.actions_applied);
+                
+                // Show results section
+                document.getElementById('resultsSection').style.display = 'block';
+                document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+                
+                showAlert('Prompt optimized successfully!', 'success');
+            } else {
+                // Handle error gracefully
+                const errorMessage = data.error || 'Optimization service temporarily unavailable. Please try again.';
+                showAlert(errorMessage, 'warning');
+            }
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showAlert('Service temporarily unavailable. Please try again later.', 'warning');
+        } finally {
+            // Reset button state
+            btn.disabled = false;
+            btn.querySelector('.btn-text').style.display = 'inline-block';
+            btn.querySelector('.loading').style.display = 'none';
+        }
+    });
+    
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.querySelector('.hero-section');
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+
+    function displayMetrics(containerId, metrics) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = `
+            <div class="row">
+                <div class="col-6">
+                    <div class="metric-item">
+                        <span class="metric-label">Sentiment:</span>
+                        <span class="metric-value">${metrics.sentiment}</span>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="metric-item">
+                        <span class="metric-label">Factual Accuracy:</span>
+                        <span class="metric-value">${metrics.factual_accuracy}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-6">
+                    <div class="metric-item">
+                        <span class="metric-label">Diversity:</span>
+                        <span class="metric-value">${metrics.diversity}</span>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="metric-item">
+                        <span class="metric-label">Length:</span>
+                        <span class="metric-value">${metrics.length}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function displayOptimizationHistory(history, actions) {
+        const container = document.getElementById('optimizationHistory');
+        if (history && history.length > 0) {
+            let historyHtml = '<div class="timeline">';
+            history.forEach((step, index) => {
+                const actionName = step.action_name ? step.action_name.replace('_', ' ').toUpperCase() : 'Unknown';
+                const score = step.score ? step.score.toFixed(3) : 'N/A';
+                historyHtml += `
+                    <div class="timeline-item">
+                        <div class="timeline-marker">${index + 1}</div>
+                        <div class="timeline-content">
+                            <strong>Action:</strong> ${actionName}<br>
+                            <strong>Score:</strong> ${score}<br>
+                            <strong>Prompt:</strong> ${step.prompt || 'N/A'}
+                        </div>
+                    </div>
+                `;
+            });
+            historyHtml += '</div>';
+            container.innerHTML = historyHtml;
+        } else {
+            container.innerHTML = '<p class="text-muted">No optimization history available</p>';
+        }
+    }
+    
+    async function loadHistory() {
+        try {
+            const response = await fetch('/history');
+            const history = await response.json();
+            
+            if (history.length > 0) {
+                const historyList = document.getElementById('historyList');
+                historyList.innerHTML = '';
+                
+                history.slice(-5).reverse().forEach(item => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'card history-item mb-2';
+                    historyItem.innerHTML = `
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <small class="text-muted">Original</small>
+                                    <p class="mb-1">${item.original_prompt}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Optimized</small>
+                                    <p class="mb-1">${item.optimized_prompt}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="badge bg-primary me-1">${item.action_taken}</span>
+                                            <span class="badge ${item.improvement >= 0 ? 'bg-success' : 'bg-danger'}">
+                                                ${(item.improvement >= 0 ? '+' : '') + item.improvement}
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">${item.timestamp}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    historyList.appendChild(historyItem);
+                });
+                
+                document.getElementById('historySection').style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error loading history:', error);
+        }
+    }
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,79 @@
+# A2C Prompt Optimization Configuration - LIGHTWEIGHT VERSION
+
+# Model configuration
+model:
+  state_dim: 30  # Reduced from 50
+  action_dim: 5  # Reduced from 10
+  hidden_dims: [64, 32]  # Reduced from [128, 64, 32]
+  learning_rate: 0.001
+  gamma: 0.99
+  device: "cpu"
+
+# Training configuration - LIGHTWEIGHT
+training:
+  episodes: 50  # Reduced from 1000 for quick training
+  max_steps_per_episode: 10  # Reduced from 50
+  batch_size: 8  # Reduced from 32
+  update_frequency: 5  # Reduced from 10
+  save_frequency: 10  # Reduced from 100
+  eval_frequency: 10  # Reduced from 50
+  early_stopping_patience: 10  # Reduced from 50
+
+# Environment configuration
+environment:
+  max_prompt_length: 200  # Reduced from 500
+  min_prompt_length: 5  # Reduced from 10
+  reward_weights:
+    coherence: 0.4
+    relevance: 0.4
+    clarity: 0.2
+
+# Evaluation configuration
+evaluation:
+  metrics:
+    - cosine_similarity
+    - sentiment
+    - factual_accuracy
+  test_prompts_count: 10  # Reduced from 100
+  consistency_trials: 2  # Reduced from 3
+
+# API configuration
+api:
+  groq_api_key: ""  # Set via environment variable GROQ_API_KEY
+  google_api_key: ""  # Set via environment variable GOOGLE_API_KEY
+  google_cse_id: ""  # Set via environment variable GOOGLE_CSE_ID
+  timeout: 15  # Reduced from 30
+  retry_attempts: 2  # Reduced from 3
+
+# Data configuration
+data:
+  dataset_path: "data/processed/"
+  model_save_path: "data/models/"
+  logs_path: "logs/"
+  cache_dir: "cache/"
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/a2c_training.log"
+
+# Prompt optimization settings
+optimization:
+  max_iterations: 3  # Reduced from 5
+  improvement_threshold: 0.05  # Reduced from 0.1
+  action_mappings:
+    0: "add_clarity"
+    1: "add_specificity"
+    2: "add_context"
+    3: "simplify_language"
+    4: "no_change"
+
+# Evaluation weights for reward function
+reward_function:
+  lambda1: 0.4  # Cosine similarity weight
+  lambda2: 0.2  # Redundancy penalty weight
+  lambda3: 0.4  # Groq rating weight
+  alpha: 0.5    # User rating weight
+  beta: 0.3     # Sentiment score weight
+  gamma: 0.2    # Hallucination penalty weight 

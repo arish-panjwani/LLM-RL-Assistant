@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block title %}A2C Prompt Optimizer - Demo{% endblock %}
+
+{% block content %}
+<div class="hero-section text-center">
+    <h1 class="display-4 fw-bold mb-3">
+        <i class="fas fa-play-circle text-primary me-3"></i>
+        Interactive Demo
+    </h1>
+    <p class="lead mb-4">
+        Try our pre-loaded examples or create your own prompts to see the A2C system in action.
+    </p>
+</div>
+
+<!-- Example Prompts -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Quick Examples
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <button class="btn btn-outline-primary w-100 example-btn" 
+                                data-prompt="What is machine learning?">
+                            <i class="fas fa-robot me-2"></i>Machine Learning
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <button class="btn btn-outline-primary w-100 example-btn" 
+                                data-prompt="How does neural network work?">
+                            <i class="fas fa-network-wired me-2"></i>Neural Networks
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <button class="btn btn-outline-primary w-100 example-btn" 
+                                data-prompt="Explain reinforcement learning">
+                            <i class="fas fa-brain me-2"></i>Reinforcement Learning
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <button class="btn btn-outline-primary w-100 example-btn" 
+                                data-prompt="What is deep learning?">
+                            <i class="fas fa-layer-group me-2"></i>Deep Learning
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <button class="btn btn-outline-primary w-100 example-btn" 
+                                data-prompt="How to train a model?">
+                            <i class="fas fa-graduation-cap me-2"></i>Model Training
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <button class="btn btn-outline-primary w-100 example-btn" 
+                                data-prompt="What is natural language processing?">
+                            <i class="fas fa-language me-2"></i>NLP
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Optimization Interface -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-magic me-2"></i>Optimization Interface
+                </h5>
+                <form id="demoForm">
+                    <div class="mb-3">
+                        <label for="demoPromptInput" class="form-label">Enter your prompt:</label>
+                        <textarea 
+                            class="form-control" 
+                            id="demoPromptInput" 
+                            rows="4" 
+                            placeholder="Type your prompt here or click an example above..."
+                            required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg" id="demoOptimizeBtn">
+                        <span class="btn-text">
+                            <i class="fas fa-wand-magic-sparkles me-2"></i>Optimize Now
+                        </span>
+                        <span class="loading">
+                            <span class="spinner-border spinner-border-sm me-2"></span>Processing...
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>System Stats
+                </h6>
+            </div>
+            <div class="card-body" id="statsContainer">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading statistics...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>How It Works
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-primary">1. Input Analysis</h6>
+                    <small class="text-muted">The system analyzes your prompt's features and structure.</small>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-primary">2. Action Selection</h6>
+                    <small class="text-muted">A2C model chooses the best optimization action.</small>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-primary">3. Prompt Enhancement</h6>
+                    <small class="text-muted">Your prompt is improved using the selected action.</small>
+                </div>
+                <div>
+                    <h6 class="text-primary">4. Quality Assessment</h6>
+                    <small class="text-muted">System evaluates and scores the improvement.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Section -->
+<div id="demoResultsSection" class="mt-4" style="display: none;">
+    <h4 class="mb-3">
+        <i class="fas fa-chart-line me-2"></i>Optimization Results
+    </h4>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card result-card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>Original Prompt
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="card-text" id="demoOriginalPrompt"></p>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-secondary me-2">Quality Score:</span>
+                        <span id="demoOriginalScore" class="fw-bold"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card result-card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-star me-2"></i>Optimized Prompt
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="card-text" id="demoOptimizedPrompt"></p>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="badge bg-success me-2">Quality Score:</span>
+                            <span id="demoOptimizedScore" class="fw-bold"></span>
+                        </div>
+                        <span class="action-badge" id="demoActionTaken"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <h6 class="card-title">
+                        <i class="fas fa-trophy me-2"></i>Performance Analysis
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="feature-icon mx-auto">
+                                <i class="fas fa-arrow-up"></i>
+                            </div>
+                            <h5 id="demoImprovementValue" class="mb-0"></h5>
+                            <small class="text-muted">Improvement</small>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="feature-icon mx-auto">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                            <h5 id="demoActionName" class="mb-0"></h5>
+                            <small class="text-muted">Action Applied</small>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="feature-icon mx-auto">
+                                <i class="fas fa-percentage"></i>
+                            </div>
+                            <h5 id="demoImprovementPercent" class="mb-0"></h5>
+                            <small class="text-muted">Improvement %</small>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="feature-icon mx-auto">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <h5 id="demoTimestamp" class="mb-0"></h5>
+                            <small class="text-muted">Timestamp</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('demoForm');
+    const promptInput = document.getElementById('demoPromptInput');
+    const optimizeBtn = document.getElementById('demoOptimizeBtn');
+    const btnText = optimizeBtn.querySelector('.btn-text');
+    const loading = optimizeBtn.querySelector('.loading');
+    const exampleBtns = document.querySelectorAll('.example-btn');
+    
+    // Load stats on page load
+    loadStats();
+    
+    // Example button handlers
+    exampleBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const prompt = this.getAttribute('data-prompt');
+            promptInput.value = prompt;
+            promptInput.focus();
+        });
+    });
+    
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const prompt = promptInput.value.trim();
+        if (!prompt) return;
+        
+        // Show loading state
+        btnText.style.display = 'none';
+        loading.classList.add('show');
+        optimizeBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/optimize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ prompt: prompt })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                displayDemoResults(result);
+                loadStats(); // Refresh stats
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        } finally {
+            // Hide loading state
+            btnText.style.display = 'inline';
+            loading.classList.remove('show');
+            optimizeBtn.disabled = false;
+        }
+    });
+    
+    function displayDemoResults(result) {
+        // Display results
+        document.getElementById('demoOriginalPrompt').textContent = result.original_prompt;
+        document.getElementById('demoOptimizedPrompt').textContent = result.optimized_prompt;
+        document.getElementById('demoOriginalScore').textContent = result.initial_score;
+        document.getElementById('demoOptimizedScore').textContent = result.final_score;
+        document.getElementById('demoActionTaken').textContent = result.action_taken;
+        document.getElementById('demoImprovementValue').textContent = 
+            (result.improvement >= 0 ? '+' : '') + result.improvement;
+        document.getElementById('demoActionName').textContent = result.action_taken;
+        document.getElementById('demoImprovementPercent').textContent = 
+            (result.improvement >= 0 ? '+' : '') + 
+            ((result.improvement / result.initial_score) * 100).toFixed(1) + '%';
+        document.getElementById('demoTimestamp').textContent = result.timestamp;
+        
+        // Style improvement value
+        const improvementEl = document.getElementById('demoImprovementValue');
+        improvementEl.className = result.improvement >= 0 ? 
+            'mb-0 improvement-positive' : 'mb-0 improvement-negative';
+        
+        // Show results section
+        document.getElementById('demoResultsSection').style.display = 'block';
+        
+        // Scroll to results
+        document.getElementById('demoResultsSection').scrollIntoView({ 
+            behavior: 'smooth' 
+        });
+    }
+    
+    async function loadStats() {
+        try {
+            const response = await fetch('/stats');
+            const stats = await response.json();
+            
+            const statsContainer = document.getElementById('statsContainer');
+            statsContainer.innerHTML = `
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="feature-icon mx-auto">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <h6 class="mb-0">${stats.model_loaded ? 'Loaded' : 'Not Loaded'}</h6>
+                        <small class="text-muted">Model Status</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="feature-icon mx-auto">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h6 class="mb-0">${stats.groq_available ? 'Available' : 'Not Available'}</h6>
+                        <small class="text-muted">LLM API</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="feature-icon mx-auto">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h6 class="mb-0">${stats.total_optimizations}</h6>
+                        <small class="text-muted">Total Optimizations</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="feature-icon mx-auto">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <h6 class="mb-0">${stats.success_rate || 'N/A'}</h6>
+                        <small class="text-muted">Success Rate</small>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    }
+});
+</script>
+{% endblock %} 

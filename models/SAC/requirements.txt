@@ -4,4 +4,3 @@ scikit-learn
 nltk
 openai
 python-dotenv
-requests 

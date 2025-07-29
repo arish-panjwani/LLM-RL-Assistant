@@ -1,7 +1,13 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 *.so
 .Python
 build/
@@ -22,19 +28,12 @@ wheels/
 MANIFEST
 
 # Virtual environments
-rl_env/
+ppo_env/
 venv/
 env/
 ENV/
 env.bak/
 venv.bak/
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 # IDE
 .vscode/
@@ -52,43 +51,16 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Logs
-logs/
-*.log
-
-# Model files (large)
-models/*.zip
-models/*.pth
-models/*.ckpt
+# Model files
 saved_model/
-
-# Tensorboard
-tensorboard_logs/
-runs/
-
-# Data
-data/datasets/
-*.csv
-*.json
+*.pth
+*.pt
 *.pkl
 
-# Jupyter
-.ipynb_checkpoints
-*.ipynb
+# Logs
+*.log
+logs/
 
-# Coverage
-htmlcov/
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
+# API keys and secrets
+secrets.json
+config.json 

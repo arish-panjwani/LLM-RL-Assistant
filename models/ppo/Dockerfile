@@ -1,31 +1,20 @@
+# Use official Python image
 FROM python:3.10-slim
 
+# Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl \
-    software-properties-common \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install Python packages
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
+# Copy local files to container
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p models logs data tensorboard_logs
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Set environment variables
-ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
+# Download NLTK lexicon at build time
+RUN python -c "import nltk; nltk.download('vader_lexicon')"
 
-# Expose port
-EXPOSE 8000
+# Set environment variables 
+ENV GROQ_API_BASE=https://api.groq.com/openai/v1
 
-# Default command
-CMD ["python", "main.py"]
+# Run inference by default
+CMD ["python", "inference_test.py"] 

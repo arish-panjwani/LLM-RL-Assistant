@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  ppo-model:
+    build: .
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_API_BASE=https://api.groq.com/openai/v1
+    volumes:
+      - ./saved_model:/app/saved_model
+    ports:
+      - "8000:8000" 

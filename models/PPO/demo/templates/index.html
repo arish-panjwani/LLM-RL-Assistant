@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPO Prompt Optimizer</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white py-6">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">🚀 PPO Prompt Optimizer</h1>
+                    <p class="text-blue-100 mt-2">AI-Powered Prompt Optimization with Reinforcement Learning</p>
+                </div>
+                <div class="text-right">
+                    <div id="modelStatus" class="text-sm">
+                        <i class="fas fa-circle text-yellow-400"></i>
+                        <span>Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Input Section -->
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8 card-hover">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-magic text-purple-500 mr-2"></i>
+                    Prompt Optimization
+                </h2>
+                
+                <div class="mb-4">
+                    <label for="promptInput" class="block text-sm font-medium text-gray-700 mb-2">
+                        Enter your prompt to optimize:
+                    </label>
+                    <textarea 
+                        id="promptInput" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                        rows="3"
+                        placeholder="e.g., How do I cook rice? Tell me about Mars. What are flu symptoms?"
+                    ></textarea>
+                </div>
+                
+                <button 
+                    id="optimizeBtn"
+                    class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 flex items-center"
+                    onclick="optimizePrompt()"
+                >
+                    <i class="fas fa-wand-magic-sparkles mr-2"></i>
+                    Optimize Prompt
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="hidden bg-white rounded-lg shadow-lg p-6 mb-8 card-hover">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-chart-line text-green-500 mr-2"></i>
+                    Optimization Results
+                </h3>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Original Prompt -->
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <h4 class="font-semibold text-blue-800 mb-2">
+                            <i class="fas fa-file-alt mr-2"></i>
+                            Original Prompt
+                        </h4>
+                        <p id="originalPrompt" class="text-blue-700"></p>
+                    </div>
+                    
+                    <!-- Optimized Prompt -->
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <h4 class="font-semibold text-green-800 mb-2">
+                            <i class="fas fa-magic mr-2"></i>
+                            Optimized Prompt
+                        </h4>
+                        <p id="optimizedPrompt" class="text-green-700"></p>
+                    </div>
+                </div>
+                
+                <!-- LLM Response -->
+                <div class="mt-6 bg-gray-50 rounded-lg p-4">
+                    <h4 class="font-semibold text-gray-800 mb-2">
+                        <i class="fas fa-robot mr-2"></i>
+                        LLM Response
+                    </h4>
+                    <p id="llmResponse" class="text-gray-700"></p>
+                </div>
+                
+                <!-- Feedback Section -->
+                <div class="mt-6 border-t pt-6">
+                    <h4 class="font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-thumbs-up mr-2"></i>
+                        How satisfied are you with this optimization?
+                    </h4>
+                    <div class="flex space-x-4">
+                        <button 
+                            onclick="provideFeedback('satisfied')"
+                            class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition duration-300 flex items-center"
+                        >
+                            <i class="fas fa-thumbs-up mr-2"></i>
+                            Satisfied
+                        </button>
+                        <button 
+                            onclick="provideFeedback('not_satisfied')"
+                            class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg transition duration-300 flex items-center"
+                        >
+                            <i class="fas fa-thumbs-down mr-2"></i>
+                            Not Satisfied
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Section -->
+            <div id="statsSection" class="bg-white rounded-lg shadow-lg p-6 card-hover">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-chart-bar text-blue-500 mr-2"></i>
+                    Feedback Statistics
+                </h3>
+                
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-blue-600" id="totalFeedback">0</div>
+                        <div class="text-sm text-gray-600">Total Feedback</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-green-600" id="satisfiedCount">0</div>
+                        <div class="text-sm text-gray-600">Satisfied</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-purple-600" id="satisfactionRate">0%</div>
+                        <div class="text-sm text-gray-600">Satisfaction Rate</div>
+                    </div>
+                </div>
+                
+                <div id="recentFeedback" class="mt-6">
+                    <h4 class="font-semibold text-gray-800 mb-3">Recent Feedback</h4>
+                    <div class="text-sm text-gray-600">No feedback yet. Start optimizing prompts!</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 flex items-center">
+            <i class="fas fa-spinner loading text-purple-600 text-2xl mr-4"></i>
+            <span class="text-lg">Optimizing your prompt...</span>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentOptimization = null;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            checkModelStatus();
+            loadStatistics();
+        });
+
+        // Check model status
+        async function checkModelStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                const statusElement = document.getElementById('modelStatus');
+                if (data.model_loaded) {
+                    statusElement.innerHTML = '<i class="fas fa-circle text-green-400"></i><span>Model Ready</span>';
+                } else {
+                    statusElement.innerHTML = '<i class="fas fa-circle text-red-400"></i><span>Model Error</span>';
+                }
+            } catch (error) {
+                console.error('Error checking model status:', error);
+            }
+        }
+
+        // Optimize prompt
+        async function optimizePrompt() {
+            const promptInput = document.getElementById('promptInput');
+            const prompt = promptInput.value.trim();
+            
+            if (!prompt) {
+                alert('Please enter a prompt to optimize.');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loadingModal').classList.remove('hidden');
+            document.getElementById('optimizeBtn').disabled = true;
+
+            try {
+                const response = await fetch('/api/optimize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Store current optimization
+                    currentOptimization = data;
+                    
+                    // Display results
+                    document.getElementById('originalPrompt').textContent = data.original;
+                    document.getElementById('optimizedPrompt').textContent = data.optimized;
+                    document.getElementById('llmResponse').textContent = data.llm_response;
+                    
+                    // Show results section
+                    document.getElementById('resultsSection').classList.remove('hidden');
+                    
+                    // Scroll to results
+                    document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while optimizing the prompt.');
+            } finally {
+                // Hide loading
+                document.getElementById('loadingModal').classList.add('hidden');
+                document.getElementById('optimizeBtn').disabled = false;
+            }
+        }
+
+        // Provide feedback
+        async function provideFeedback(feedback) {
+            if (!currentOptimization) {
+                alert('No optimization to provide feedback on.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ feedback: feedback })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update statistics
+                    updateStatistics(data.statistics);
+                    
+                    // Show success message
+                    const message = feedback === 'satisfied' ? 'Thank you! Your feedback has been recorded.' : 'Thank you for your feedback. We\'ll improve!';
+                    alert(message);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while submitting feedback.');
+            }
+        }
+
+        // Load statistics
+        async function loadStatistics() {
+            try {
+                const response = await fetch('/api/statistics');
+                const data = await response.json();
+                updateStatistics(data);
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        // Update statistics display
+        function updateStatistics(stats) {
+            document.getElementById('totalFeedback').textContent = stats.total_feedback;
+            document.getElementById('satisfiedCount').textContent = stats.satisfied_count;
+            document.getElementById('satisfactionRate').textContent = stats.satisfaction_rate + '%';
+            
+            // Update recent feedback
+            const recentElement = document.getElementById('recentFeedback');
+            if (stats.recent_feedback && stats.recent_feedback.length > 0) {
+                let html = '<h4 class="font-semibold text-gray-800 mb-3">Recent Feedback</h4>';
+                stats.recent_feedback.forEach(feedback => {
+                    const icon = feedback.satisfied ? 'thumbs-up text-green-500' : 'thumbs-down text-red-500';
+                    const status = feedback.satisfied ? 'Satisfied' : 'Not Satisfied';
+                    html += `
+                        <div class="border-l-4 border-gray-200 pl-3 mb-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">${feedback.original.substring(0, 50)}...</span>
+                                <span class="text-sm"><i class="fas fa-${icon} mr-1"></i>${status}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                recentElement.innerHTML = html;
+            }
+        }
+
+        // Enter key to optimize
+        document.getElementById('promptInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                optimizePrompt();
+            }
+        });
+    </script>
+</body>
+</html> 

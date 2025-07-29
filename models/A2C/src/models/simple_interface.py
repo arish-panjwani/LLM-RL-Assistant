@@ -32,7 +32,7 @@ class SimpleA2CInterface:
     def _load_model(self):
         """Load the trained A2C model."""
         try:
-            from .a2c_model import A2CModel
+            from a2c_model import A2CModel
             
             # Basic model configuration
             model_config = {
@@ -82,7 +82,7 @@ class SimpleA2CInterface:
         
         for iteration in range(max_iterations):
             print(f"\n📝 Iteration {iteration + 1}/{max_iterations}")
-            print(f"Current prompt: {current_prompt}")
+            print(f"Current prompt: {current_prompt[:80]}{'...' if len(current_prompt) > 80 else ''}")
             
             # Extract features from current prompt
             features = self._extract_features(current_prompt)
@@ -97,11 +97,11 @@ class SimpleA2CInterface:
             action_name = self._get_action_name(action)
             
             print(f"🤖 A2C Action: {action_name}")
-            print(f"Optimized prompt: {modified_prompt}")
+            print(f"Optimized prompt: {modified_prompt[:80]}{'...' if len(modified_prompt) > 80 else ''}")
             
             # Get LLM response (simulated or real)
             llm_response = self._get_llm_response(modified_prompt)
-            print(f"🤖 LLM Response: {llm_response[:100]}...")
+            print(f"🤖 LLM Response: {llm_response[:60]}...")
             
             # Get automated evaluation score
             evaluation_score = self._evaluate_response_quality(modified_prompt, llm_response)
@@ -109,11 +109,12 @@ class SimpleA2CInterface:
             
             # Simulate human feedback (team members can replace this with real feedback)
             human_feedback = self._simulate_human_feedback(modified_prompt, llm_response)
-            print(f"👤 Human Feedback: {human_feedback}")
+            print(f"👤 Human Feedback: {human_feedback:.1f}")
             
             # Calculate combined reward
             reward = 0.7 * human_feedback + 0.3 * evaluation_score
             print(f"🎯 Combined Reward: {reward:.3f}")
+            print("-" * 40)
             
             optimization_history.append({
                 'iteration': iteration + 1,

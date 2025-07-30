@@ -87,7 +87,7 @@ Where:
 
 ### 1. Setup Environment Variables
 ```bash
-export GROQ_API_KEY="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"
+export GROQ_API_KEY="your_groq_api_key"
 export GROQ_API_BASE="https://api.groq.com/openai/v1"
 ```
 
@@ -137,10 +137,3 @@ The Docker setup includes:
 - NLTK lexicon downloaded
 - Environment variables configured
 - Volume mounting for model persistence
-
-## Next Steps
-
-1. **Training**: Run `python main.py` to train the PPO model
-2. **Testing**: Use `python inference_test.py` to test the trained model
-3. **Docker**: Build and deploy using Docker for team sharing
-4. **Integration**: Combine with other team members' models (A2C, SAC)

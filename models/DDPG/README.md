@@ -42,6 +42,12 @@ pip install -r requirements.txt
 
 ---
 
+## Configure Groq API
+
+GROQ_API_KEY=key
+GROQ_API_BASE=https://api.groq.com/openai/v1
+
+
 ## 🧠 Train the DDPG Agent
 
 Run the following command to train the DDPG agent using prompt refinements and sentiment-based rewards:

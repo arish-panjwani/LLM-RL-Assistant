@@ -4,17 +4,20 @@ FROM python:3.10-slim
 # Set working directory
 WORKDIR /app
 
-# Copy local files to container
+# Copy all files
 COPY . .
 
-# Install Python dependencies
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download NLTK lexicon at build time
+# Download NLTK lexicon (for sentiment)
 RUN python -c "import nltk; nltk.download('vader_lexicon')"
 
-# Set environment variables 
+# Set environment variable for Groq API
 ENV GROQ_API_BASE=https://api.groq.com/openai/v1
 
-# Run inference by default
-CMD ["python", "inference_test.py"]
+# Expose the Flask API port
+EXPOSE 5000
+
+# Start Flask API instead of inference_test
+CMD ["python", "app.py"]

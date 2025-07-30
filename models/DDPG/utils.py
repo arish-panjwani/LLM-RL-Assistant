@@ -1,3 +1,5 @@
+# 🔧 utils.py
+
 import random
 import torch
 import numpy as np
@@ -7,6 +9,7 @@ from sentence_transformers import SentenceTransformer, util
 from sklearn.metrics.pairwise import cosine_similarity
 from openai import OpenAI
 import os
+import re
 
 nltk.download('vader_lexicon')
 
@@ -37,7 +40,7 @@ class PromptEnvironment:
 
     def decode(self, embedding):
         if self.original_prompt:
-            return f'Can you rephrase the following prompt to be clearer and more specific for an LLM: "{self.original_prompt}"'
+            return self.original_prompt
         else:
             return "Can you rephrase this prompt to be clearer?"
 
@@ -52,10 +55,14 @@ class PromptEnvironment:
                 temperature=0.7,
                 max_tokens=100
             )
-            return response.choices[0].message.content.strip()
+            full_text = response.choices[0].message.content.strip()
+
+            # Clean typical prefixes like "Here is..." or markdown quotes
+            cleaned = re.sub(r'^.*?"(.*?)"\s*$', r'\1', full_text, flags=re.DOTALL)
+            return cleaned.strip('"').strip()
         except Exception as e:
             return f"Error during LLM response: {str(e)}"
-
+    
     def detect_hallucination(self, response: str) -> float:
         hallucination_phrases = [
             "I'm not sure", "might be", "could be", "possibly",

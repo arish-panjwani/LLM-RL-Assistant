@@ -1,3 +1,5 @@
+# 🧪 inference_test.py
+
 import torch
 from sentence_transformers import SentenceTransformer
 from utils import PromptEnvironment
@@ -13,7 +15,7 @@ def main():
 
     agent = DDPGAgent(state_dim=state_dim, action_dim=action_dim, device=device)
     agent.load("saved_model/ddpg_actor.pth")
-    print("Loaded trained DDPG model.")
+    print("✅ Loaded trained DDPG model.")
 
     test_prompt = input("🔍 Enter your prompt: ")
     env.original_prompt = test_prompt  # Set for decode logic
@@ -36,7 +38,7 @@ def main():
 
     agent.train_step(state, action.unsqueeze(0), reward, next_state, done)
     agent.save("saved_model/ddpg_actor.pth")
-    print(f"Updated model with reward: {reward:.2f}")
+    print(f"✅ Updated model with reward: {reward:.2f}")
 
 if __name__ == "__main__":
     main()

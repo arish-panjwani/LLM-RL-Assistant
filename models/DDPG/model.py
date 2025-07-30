@@ -1,3 +1,5 @@
+# model.py
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -79,8 +81,14 @@ class DDPGAgent:
 
         states, actions, rewards, next_states, dones = self.replay_buffer.sample(self.batch_size)
         states, actions, rewards, next_states, dones = (
-            states.to(self.device), actions.to(self.device), rewards.unsqueeze(1).to(self.device),
-            next_states.to(self.device), dones.unsqueeze(1).to(self.device)
+            states.to(self.device).squeeze(1), 
+            actions.to(self.device).squeeze(1), 
+            rewards.unsqueeze(1).to(self.device),
+            next_states.to(self.device).squeeze(1), 
+            dones.unsqueeze(1).to(self.device)
+        # states, actions, rewards, next_states, dones = (
+        #     states.to(self.device), actions.to(self.device), rewards.unsqueeze(1).to(self.device),
+        #     next_states.to(self.device), dones.unsqueeze(1).to(self.device)
         )
 
         with torch.no_grad():

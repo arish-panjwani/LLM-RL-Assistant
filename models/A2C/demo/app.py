@@ -1,252 +1,341 @@
 #!/usr/bin/env python3
 """
-Flask web application for A2C Prompt Optimization Demo.
+Flask WebApp for A2C Model Testing
 """
 
-import os
 import sys
+import os
+
+# Add parent directory to Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from flask import Flask, render_template, request, jsonify, session
+import torch
+from sentence_transformers import SentenceTransformer
+from utils import PromptEnvironment
+from model import A2CAgent
 import json
-import logging
 from datetime import datetime
-from pathlib import Path
-from flask import Flask, render_template, request, jsonify
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
-
-# Add src to path
-sys.path.append(str(Path(__file__).parent.parent / "src"))
-
-# Setup logging - only show warnings and errors
-logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.secret_key = 'a2c_demo_secret_key'
 
-# History file path
-HISTORY_FILE = Path(__file__).parent / "optimization_history.json"
-
-def load_history():
-    """Load optimization history from file."""
-    try:
-        if HISTORY_FILE.exists():
-            with open(HISTORY_FILE, 'r') as f:
-                return json.load(f)
-        return []
-    except Exception as e:
-        print(f"Error loading history: {e}")
-        return []
-
-def save_history(history):
-    """Save optimization history to file."""
-    try:
-        HISTORY_FILE.parent.mkdir(exist_ok=True)
-        with open(HISTORY_FILE, 'w') as f:
-            json.dump(history, f, indent=2)
-    except Exception as e:
-        print(f"Error saving history: {e}")
-
-def add_to_history(optimization_data):
-    """Add a new optimization to history."""
-    try:
-        history = load_history()
+# Global variables for model - use a class to persist across restarts
+class ModelManager:
+    def __init__(self):
+        self.agent = None
+        self.encoder = None
+        self.device = None
+        self.env = None
+        self.model_loaded = False
+        self._initialized = False
+    
+    def initialize(self):
+        """Initialize the A2C model - called at startup"""
+        if self._initialized:
+            print("✅ Model already initialized")
+            return self.model_loaded
         
-        # Create history entry
-        history_entry = {
-            'id': len(history) + 1,
-            'timestamp': datetime.now().isoformat(),
-            'original_prompt': optimization_data.get('original_prompt', ''),
-            'optimized_prompt': optimization_data.get('optimized_prompt', ''),
-            'initial_score': optimization_data.get('initial_score', 0),
-            'final_score': optimization_data.get('final_score', 0),
-            'improvement': optimization_data.get('improvement', 0),
-            'action_name': optimization_data.get('action_name', 'Optimization Applied'),
-            'optimization_history': optimization_data.get('optimization_history', [])
+        try:
+            print("🔧 Setting up device...")
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            print(f"✅ Using device: {self.device}")
+            
+            print("🔧 Loading sentence transformer...")
+            self.encoder = SentenceTransformer("all-MiniLM-L6-v2")
+            print("✅ Sentence transformer loaded")
+            
+            print("🔧 Setting up A2C agent...")
+            state_dim = self.encoder.get_sentence_embedding_dimension()
+            action_dim = state_dim
+            print(f"✅ State/Action dimensions: {state_dim}")
+            
+            self.agent = A2CAgent(state_dim=state_dim, action_dim=action_dim, device=self.device)
+            print("✅ A2C agent created")
+            
+            # Try to load pre-trained model
+            model_path = "../saved_model/a2c_actor.pth"
+            if os.path.exists(model_path):
+                print(f"🔧 Loading pre-trained model from: {model_path}")
+                self.agent.load(model_path)
+                print("✅ Loaded pre-trained model")
+            else:
+                print("⚠️  No pre-trained model found. Using untrained model.")
+                print(f"   Expected path: {os.path.abspath(model_path)}")
+            
+            print("🔧 Setting up environment...")
+            self.env = PromptEnvironment(self.encoder)
+            print("✅ Environment created")
+            
+            # Set model as loaded
+            self.model_loaded = True
+            self._initialized = True
+            print("✅ Model loading completed successfully!")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error loading model: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            self.model_loaded = False
+            return False
+    
+    def get_status(self):
+        """Get current model status"""
+        status = {
+            'model_loaded': self.model_loaded,
+            'agent_loaded': self.agent is not None,
+            'encoder_loaded': self.encoder is not None,
+            'env_loaded': self.env is not None,
+            'device': str(self.device) if self.device else "Not available",
+            'has_pretrained': os.path.exists("../saved_model/a2c_actor.pth"),
+            'initialized': self._initialized
         }
+        return status
+    
+    def optimize_prompt(self, prompt_text):
+        """Optimize a prompt using the A2C model"""
+        # Check model status
+        status = self.get_status()
+        if not status['model_loaded']:
+            return {
+                'success': False,
+                'error': 'Model not loaded. Please check the server logs.'
+            }
         
-        # Add to history (keep last 50 entries)
-        history.append(history_entry)
-        if len(history) > 50:
-            history = history[-50:]
-        
-        save_history(history)
-        return history
-    except Exception as e:
-        print(f"Error adding to history: {e}")
-        return []
+        try:
+            # Set the original prompt
+            self.env.original_prompt = prompt_text
+            
+            # Encode the prompt
+            state = self.env.encode(prompt_text).unsqueeze(0).to(self.device)
+            
+            # Get A2C action
+            action, log_prob, value = self.agent.select_action(state)
+            action = torch.tensor(action, dtype=torch.float32).to(self.device)
+            
+            # Decode the action to get optimized prompt
+            optimized_prompt = self.env.decode(action.squeeze())
+            
+            # Get LLM response
+            response = self.env.real_llm_response(optimized_prompt)
+            
+            # Calculate reward
+            reward = self.env.calculate_reward_with_feedback(prompt_text, optimized_prompt, response)
+            
+            return {
+                'success': True,
+                'original': prompt_text,
+                'optimized': optimized_prompt,
+                'llm_response': response,
+                'reward': float(reward),
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Error during optimization: {str(e)}'
+            }
 
-def initialize_components():
-    """Initialize all components for the demo."""
-    try:
-        # Load configuration
-        from utils.config import Config
-        config = Config()
-        
-        # Initialize Groq client with environment variable
-        from utils.groq_client import GroqClient
-        groq_api_key = os.getenv('GROQ_API_KEY')
-        if not groq_api_key:
-            print("⚠️  GROQ_API_KEY not found - LLM features will be limited")
-            groq_client = None
-        else:
-            groq_client = GroqClient(api_key=groq_api_key)
-        
-        # Initialize prompt optimizer
-        from models.prompt_optimizer import PromptOptimizer
-        model_path = "data/models/a2c_domain_agnostic_best.pth"
-        optimizer = PromptOptimizer(model_path, config.get_model_config(), groq_client)
-        
-        return optimizer, groq_client
-        
-    except Exception as e:
-        print(f"❌ Failed to initialize components: {e}")
-        return None, None
-
-# Initialize components at startup
-optimizer, groq_client = initialize_components()
+# Initialize model manager
+model_manager = ModelManager()
 
 @app.route('/')
 def index():
-    """Main demo page."""
     return render_template('index.html')
 
-@app.route('/optimize', methods=['POST'])
-def optimize_prompt():
-    """Optimize a prompt using the A2C model."""
+@app.route('/api/optimize', methods=['POST'])
+def api_optimize():
+    """API endpoint for prompt optimization"""
     try:
         data = request.get_json()
-        prompt = data.get('prompt', '').strip()
+        if not data or 'prompt' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'No prompt provided'
+            }), 400
         
+        prompt = data['prompt'].strip()
         if not prompt:
-            return jsonify({'error': 'No prompt provided'}), 400
-        
-        if not optimizer:
-            return jsonify({'error': 'Optimizer not initialized'}), 500
+            return jsonify({
+                'success': False,
+                'error': 'Empty prompt provided'
+            }), 400
         
         # Optimize the prompt
-        result = optimizer.optimize_prompt(prompt)
+        result = model_manager.optimize_prompt(prompt)
         
-        # Get LLM responses for both original and optimized prompts
-        original_response = "LLM response will be available when API is configured"
-        optimized_response = "LLM response will be available when API is configured"
-        
-        # Get detailed evaluation metrics
-        from utils.evaluation_metrics import PromptEvaluator
-        evaluator = PromptEvaluator(groq_client, use_external_apis=True)
-        
-        # Evaluate original prompt
-        original_metrics = evaluator.evaluate_response(original_response, prompt) if original_response != "LLM response will be available when API is configured" else {
-            'overall_score': result['initial_score'],
-            'sentiment_score': 0.0,
-            'hallucination_score': 0.5,
-            'diversity_score': 0.5,
-            'length_score': 0.5
-        }
-        
-        # Evaluate optimized prompt
-        optimized_metrics = evaluator.evaluate_response(optimized_response, prompt) if optimized_response != "LLM response will be available when API is configured" else {
-            'overall_score': result['final_score'],
-            'sentiment_score': 0.0,
-            'hallucination_score': 0.5,
-            'diversity_score': 0.5,
-            'length_score': 0.5
-        }
-        
-        if groq_client:
-            try:
-                # Get original prompt response
-                original_result = groq_client.generate_response(prompt, max_tokens=100)
-                if original_result.get('success'):
-                    original_response = original_result.get('response', 'No response received')
-                    # Re-evaluate with real response
-                    original_metrics = evaluator.evaluate_response(original_response, prompt)
-                else:
-                    original_response = "API temporarily unavailable"
-                
-                # Get optimized prompt response
-                optimized_result = groq_client.generate_response(result['optimized_prompt'], max_tokens=100)
-                if optimized_result.get('success'):
-                    optimized_response = optimized_result.get('response', 'No response received')
-                    # Re-evaluate with real response
-                    optimized_metrics = evaluator.evaluate_response(optimized_response, prompt)
-                else:
-                    optimized_response = "API temporarily unavailable"
-                    
-            except Exception as e:
-                # Log error but don't show to user
-                original_response = "API temporarily unavailable"
-                optimized_response = "API temporarily unavailable"
-        
-        # Get optimization history
-        optimization_history = result.get('optimization_history', [])
-        actions_applied = [step.get('action_name', 'Unknown') for step in optimization_history]
-        
-        # Prepare clean response for user
-        response_data = {
-            'original_prompt': prompt,
-            'optimized_prompt': result['optimized_prompt'],
-            'initial_score': round(result['initial_score'], 3),
-            'final_score': round(result['final_score'], 3),
-            'improvement': round(result['total_improvement'], 3),
-            'original_response': original_response,
-            'optimized_response': optimized_response,
-            'action_name': result.get('optimization_history', [{}])[0].get('action_name', 'Optimization Applied'),
-            'status': 'success',
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 500
             
-            # Detailed metrics
-            'original_metrics': {
-                'sentiment': round(original_metrics.get('sentiment_score', 0), 3),
-                'factual_accuracy': round(1 - original_metrics.get('hallucination_score', 0.5), 3),
-                'diversity': round(original_metrics.get('diversity_score', 0.5), 3),
-                'length': round(original_metrics.get('length_score', 0.5), 3)
-            },
-            'optimized_metrics': {
-                'sentiment': round(optimized_metrics.get('sentiment_score', 0), 3),
-                'factual_accuracy': round(1 - optimized_metrics.get('hallucination_score', 0.5), 3),
-                'diversity': round(optimized_metrics.get('diversity_score', 0.5), 3),
-                'length': round(optimized_metrics.get('length_score', 0.5), 3)
-            },
-            
-            # Optimization details
-            'optimization_history': optimization_history,
-            'actions_applied': actions_applied,
-            'learning_summary': result.get('learning_summary', {})
-        }
-        
-        # Add to history
-        add_to_history(response_data)
-        
-        return jsonify(response_data)
-        
     except Exception as e:
-        print(f"Optimization failed: {e}")
         return jsonify({
-            'error': 'Optimization service temporarily unavailable',
-            'status': 'error'
+            'success': False,
+            'error': f'Server error: {str(e)}'
         }), 500
 
-@app.route('/history')
-def get_history():
-    """Get optimization history."""
+@app.route('/api/feedback', methods=['POST'])
+def api_feedback():
+    """API endpoint for user feedback"""
     try:
-        history = load_history()
-        return jsonify(history)
+        data = request.get_json()
+        if not data or 'satisfied' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'No feedback provided'
+            }), 400
+        
+        satisfied = data['satisfied']
+        original = data.get('original', '')
+        optimized = data.get('optimized', '')
+        response = data.get('response', '')
+        
+        # Store feedback
+        if model_manager.env:
+            model_manager.env.user_feedback_history.append({
+                'original': original,
+                'refined': optimized,
+                'response': response,
+                'satisfied': satisfied,
+                'timestamp': len(model_manager.env.user_feedback_history)
+            })
+        
+        return jsonify({
+            'success': True,
+            'message': 'Feedback recorded successfully'
+        })
+        
     except Exception as e:
-        print(f"Error loading history: {e}")
-        return jsonify([])
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
 
-@app.route('/health')
-def health_check():
-    """Health check endpoint."""
-    return jsonify({
-        'status': 'healthy',
-        'optimizer_ready': optimizer is not None,
-        'groq_ready': groq_client is not None
-    })
+@app.route('/api/statistics')
+def api_statistics():
+    """API endpoint for feedback statistics"""
+    try:
+        if model_manager.env and model_manager.env.user_feedback_history:
+            stats = model_manager.env.get_feedback_statistics()
+            if isinstance(stats, dict):
+                return jsonify({
+                    'success': True,
+                    'statistics': stats
+                })
+            else:
+                return jsonify({
+                    'success': True,
+                    'statistics': {'message': 'No feedback collected yet'}
+                })
+        else:
+            return jsonify({
+                'success': True,
+                'statistics': {'message': 'No feedback collected yet'}
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
+
+@app.route('/api/status')
+def api_status():
+    """API endpoint for model status"""
+    try:
+        status = model_manager.get_status()
+        return jsonify({
+            'success': True,
+            'status': status
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
+
+@app.route('/api/reload')
+def api_reload():
+    """API endpoint to reload the model"""
+    try:
+        model_manager._initialized = False
+        success = model_manager.initialize()
+        return jsonify({
+            'success': success,
+            'message': 'Model reloaded successfully' if success else 'Failed to reload model'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
+
+@app.route('/api/test')
+def api_test():
+    """API endpoint for testing the model"""
+    try:
+        test_prompt = "Hello world"
+        result = model_manager.optimize_prompt(test_prompt)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'test_result': result,
+                'message': 'Model test successful'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error')
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
+
+@app.route('/api/debug')
+def api_debug():
+    """API endpoint for debugging information"""
+    try:
+        debug_info = {
+            'model_status': model_manager.get_status(),
+            'python_version': sys.version,
+            'torch_version': torch.__version__,
+            'cuda_available': torch.cuda.is_available(),
+            'device': str(model_manager.device) if model_manager.device else 'Not available',
+            'working_directory': os.getcwd(),
+            'files_in_directory': os.listdir('.'),
+            'model_files': {
+                'model_py': os.path.exists('../model.py'),
+                'utils_py': os.path.exists('../utils.py'),
+                'saved_model_dir': os.path.exists('../saved_model'),
+                'a2c_actor_pth': os.path.exists('../saved_model/a2c_actor.pth')
+            }
+        }
+        
+        return jsonify({
+            'success': True,
+            'debug_info': debug_info
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
-    print("🚀 Starting A2C Prompt Optimization Demo...")
-    print("📱 Web interface available at: http://localhost:5001")
-    print("🔧 Debug mode: ON (pin will be shown in console)")
-    app.run(host='0.0.0.0', port=5001, debug=True) 
+    # Initialize model on startup
+    print("🚀 Starting A2C WebApp...")
+    model_manager.initialize()
+    
+    # Run the Flask app
+    app.run(host='0.0.0.0', port=5000, debug=True) 

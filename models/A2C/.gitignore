@@ -3,7 +3,7 @@
 .env.local
 .env.*.local
 
-# Python
+# Python cache files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -26,23 +26,21 @@ wheels/
 *.egg
 MANIFEST
 
-# PyTorch model files (keep only sample/example models)
-*.pth
-*.pt
-*.pkl
-*.pickle
+# Virtual environments
+venv/
+env/
+ENV/
+a2c_env/
+.venv/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IDEs
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
+# OS files
 .DS_Store
 .DS_Store?
 ._*
@@ -54,21 +52,20 @@ Thumbs.db
 # Logs
 *.log
 logs/
-log/
 
-# Data files (exclude sensitive data)
-data/models/*.pth
-data/evaluation_results.json
-data/optimized_prompts_llm.json
-
-# Demo files that might contain sensitive data
-demo/optimization_history.json
+# Model files (optional - uncomment if you don't want to track model weights)
+# saved_model/
+# *.pth
+# *.pt
 
 # Temporary files
 *.tmp
 *.temp
 temp/
 tmp/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
 
 # Coverage reports
 htmlcov/
@@ -79,7 +76,5 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json 
+# Docker
+.dockerignore 

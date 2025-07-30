@@ -1,488 +1,494 @@
-{% extends "base.html" %}
-
-{% block title %}A2C Prompt Optimizer - Home{% endblock %}
-
-{% block content %}
-<style>
-    .metrics-grid {
-        display: grid;
-        gap: 10px;
-    }
-    
-    .metric-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px;
-        background: #f8f9fa;
-        border-radius: 5px;
-    }
-    
-    .metric-label {
-        font-weight: 500;
-        color: #6c757d;
-    }
-    
-    .metric-value {
-        font-weight: bold;
-        color: #0d6efd;
-    }
-    
-    .timeline {
-        position: relative;
-        padding-left: 30px;
-    }
-    
-    .timeline-item {
-        position: relative;
-        margin-bottom: 20px;
-        padding: 15px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border-left: 4px solid #0d6efd;
-    }
-    
-    .timeline-marker {
-        position: absolute;
-        left: -40px;
-        top: 15px;
-        width: 25px;
-        height: 25px;
-        background: #0d6efd;
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 12px;
-    }
-    
-    .timeline-content {
-        margin-left: 10px;
-    }
-    
-    .response-content {
-        max-height: 200px;
-        overflow-y: auto;
-        padding: 10px;
-        background: #f8f9fa;
-        border-radius: 5px;
-        font-size: 14px;
-        line-height: 1.5;
-    }
-</style>
-<div class="hero-section text-center">
-    <h1 class="display-4 fw-bold mb-3">
-        <i class="fas fa-brain text-primary me-3"></i>
-        A2C Prompt Optimization System
-    </h1>
-    <p class="lead mb-4">
-        Experience the power of Actor-Critic reinforcement learning in dynamic prompt optimization.
-        Transform your prompts with AI-driven improvements.
-    </p>
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-body p-4">
-                    <h5 class="card-title mb-3">
-                        <i class="fas fa-magic me-2"></i>Optimize Your Prompt
-                    </h5>
-                    <form id="optimizeForm">
-                        <div class="mb-3">
-                            <textarea 
-                                class="form-control" 
-                                id="promptInput" 
-                                rows="4" 
-                                placeholder="Enter your prompt here... (e.g., 'What is machine learning?')"
-                                required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-lg w-100" id="optimizeBtn">
-                            <span class="btn-text">
-                                <i class="fas fa-wand-magic-sparkles me-2"></i>Optimize Prompt
-                            </span>
-                            <span class="loading">
-                                <span class="spinner-border spinner-border-sm me-2"></span>Optimizing...
-                            </span>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Results Section -->
-<div id="resultsSection" class="mb-4" style="display: none;">
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card result-card">
-                <div class="card-body">
-                    <h6 class="card-title">
-                        <i class="fas fa-file-alt me-2"></i>Original Prompt
-                    </h6>
-                    <p class="card-text" id="originalPrompt"></p>
-                    <div class="d-flex align-items-center">
-                        <span class="badge bg-secondary me-2">Score:</span>
-                        <span id="originalScore" class="fw-bold"></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card result-card">
-                <div class="card-body">
-                    <h6 class="card-title">
-                        <i class="fas fa-star me-2"></i>Optimized Prompt
-                    </h6>
-                    <p class="card-text" id="optimizedPrompt"></p>
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <span class="badge bg-success me-2">Score:</span>
-                            <span id="optimizedScore" class="fw-bold"></span>
-                        </div>
-                        <span class="action-badge" id="actionTaken"></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Improvement Section -->
-    <div class="row mt-3">
-        <div class="col-12">
-            <div class="card result-card">
-                <div class="card-body text-center">
-                    <h6 class="card-title">
-                        <i class="fas fa-chart-line me-2"></i>Improvement
-                    </h6>
-                    <div id="improvementValue" class="fs-4"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Metrics Comparison -->
-    <div class="row mt-3">
-        <div class="col-md-6">
-            <div class="card result-card">
-                <div class="card-body">
-                    <h6 class="card-title">
-                        <i class="fas fa-chart-bar me-2"></i>Original Metrics
-                    </h6>
-                    <div id="originalMetrics" class="metrics-grid"></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card result-card">
-                <div class="card-body">
-                    <h6 class="card-title">
-                        <i class="fas fa-chart-bar me-2"></i>Optimized Metrics
-                    </h6>
-                    <div id="optimizedMetrics" class="metrics-grid"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- LLM Responses Section -->
-    <div class="row mt-3">
-        <div class="col-md-6">
-            <div class="card result-card">
-                <div class="card-body">
-                    <h6 class="card-title">
-                        <i class="fas fa-comment me-2"></i>Original Response
-                    </h6>
-                    <div class="response-content" id="originalResponse"></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card result-card">
-                <div class="card-body">
-                    <h6 class="card-title">
-                        <i class="fas fa-comment-dots me-2"></i>Optimized Response
-                    </h6>
-                    <div class="response-content" id="optimizedResponse"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Optimization History -->
-    <div class="row mt-3">
-        <div class="col-12">
-            <div class="card result-card">
-                <div class="card-body">
-                    <h6 class="card-title">
-                        <i class="fas fa-history me-2"></i>Optimization History
-                    </h6>
-                    <div id="optimizationHistory"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Features Section -->
-<div class="row mb-3">
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="feature-icon mx-auto">
-                    <i class="fas fa-brain"></i>
-                </div>
-                <h5 class="card-title">Actor-Critic Model</h5>
-                <p class="card-text">
-                    Advanced reinforcement learning using A2C architecture for intelligent prompt optimization.
-                </p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="feature-icon mx-auto">
-                    <i class="fas fa-chart-bar"></i>
-                </div>
-                <h5 class="card-title">Real-time Evaluation</h5>
-                <p class="card-text">
-                    Instant scoring and improvement metrics with comprehensive evaluation algorithms.
-                </p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="feature-icon mx-auto">
-                    <i class="fas fa-history"></i>
-                </div>
-                <h5 class="card-title">Optimization History</h5>
-                <p class="card-text">
-                    Track your optimization history and see how the model improves over time.
-                </p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- History Section -->
-<div id="historySection" class="mb-3" style="display: none;">
-    <h4 class="mb-2">
-        <i class="fas fa-history me-2"></i>Recent Optimizations
-    </h4>
-    <div id="historyList"></div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Load history on page load
-    loadHistory();
-    
-    document.getElementById('optimizeForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const prompt = document.getElementById('promptInput').value.trim();
-        if (!prompt) {
-            showAlert('Please enter a prompt to optimize.', 'warning');
-            return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A2C Prompt Optimizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        
-        // Show loading state
-        const btn = document.getElementById('optimizeBtn');
-        btn.disabled = true;
-        btn.querySelector('.btn-text').style.display = 'none';
-        btn.querySelector('.loading').style.display = 'inline-block';
-        
-        try {
-            const response = await fetch('/optimize', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ prompt: prompt })
-            });
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 100px;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #e1e5e9;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            color: white;
+        }
+
+        .results-section {
+            margin-top: 30px;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .result-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .result-text {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e1e5e9;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+        }
+
+        .feedback-section {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #28a745;
+        }
+
+        .status-offline {
+            background: #dc3545;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4facfe;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4facfe;
+        }
+
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            margin-top: 15px;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #c3e6cb;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 A2C Prompt Optimizer</h1>
+            <p>Intelligent conversational assistant with Actor-Critic reinforcement learning</p>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="prompt-input">Enter your prompt to optimize:</label>
+                    <textarea id="prompt-input" placeholder="Type your prompt here..."></textarea>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="optimizePrompt()">🚀 Optimize Prompt</button>
+                    <button class="btn btn-secondary" onclick="clearResults()">🗑️ Clear Results</button>
+                    <button class="btn btn-secondary" onclick="checkStatus()">📊 Check Status</button>
+                    <button class="btn btn-secondary" onclick="loadStats()">📈 Load Statistics</button>
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Optimizing your prompt...</p>
+            </div>
+
+            <div class="results-section" id="results-section" style="display: none;">
+                <div class="result-card">
+                    <h3>📝 Original Prompt</h3>
+                    <div class="result-text" id="original-prompt"></div>
+                </div>
+
+                <div class="result-card">
+                    <h3>🔄 Optimized Prompt</h3>
+                    <div class="result-text" id="optimized-prompt"></div>
+                </div>
+
+                <div class="result-card">
+                    <h3>🤖 LLM Response</h3>
+                    <div class="result-text" id="llm-response"></div>
+                </div>
+
+                <div class="result-card">
+                    <h3>📊 Performance Metrics</h3>
+                    <div class="result-text" id="metrics"></div>
+                </div>
+
+                <div class="feedback-section">
+                    <p><strong>Was this optimization helpful?</strong></p>
+                    <button class="btn btn-success" onclick="submitFeedback(true)">👍 Yes</button>
+                    <button class="btn btn-danger" onclick="submitFeedback(false)">👎 No</button>
+                </div>
+            </div>
+
+            <div class="stats-section" id="stats-section" style="display: none;">
+                <h3>📈 Training Statistics</h3>
+                <div class="stats-grid" id="stats-grid">
+                    <!-- Stats will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentOptimization = null;
+
+        async function optimizePrompt() {
+            const promptInput = document.getElementById('prompt-input').value.trim();
             
-            const data = await response.json();
-            
-            if (response.ok && data.status === 'success') {
-                // Display results
-                document.getElementById('originalPrompt').textContent = data.original_prompt;
-                document.getElementById('optimizedPrompt').textContent = data.optimized_prompt;
-                document.getElementById('originalScore').textContent = data.initial_score;
-                document.getElementById('optimizedScore').textContent = data.final_score;
-                document.getElementById('actionTaken').textContent = data.action_name.replace('_', ' ').toUpperCase();
-                document.getElementById('originalResponse').textContent = data.original_response;
-                document.getElementById('optimizedResponse').textContent = data.optimized_response;
-                
-                // Show improvement
-                const improvement = data.improvement;
-                const improvementText = improvement >= 0 ? `+${improvement}` : `${improvement}`;
-                const improvementColor = improvement >= 0 ? 'success' : 'danger';
-                
-                document.getElementById('improvementValue').innerHTML = `
-                    <span class="badge bg-${improvementColor} fs-6">
-                        ${improvementText} Improvement
-                    </span>
-                `;
-                
-                // Display metrics
-                displayMetrics('originalMetrics', data.original_metrics);
-                displayMetrics('optimizedMetrics', data.optimized_metrics);
-                
-                // Display optimization history
-                displayOptimizationHistory(data.optimization_history, data.actions_applied);
-                
-                // Show results section
-                document.getElementById('resultsSection').style.display = 'block';
-                document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
-                
-                showAlert('Prompt optimized successfully!', 'success');
-            } else {
-                // Handle error gracefully
-                const errorMessage = data.error || 'Optimization service temporarily unavailable. Please try again.';
-                showAlert(errorMessage, 'warning');
+            if (!promptInput) {
+                alert('Please enter a prompt to optimize.');
+                return;
             }
-            
-        } catch (error) {
-            console.error('Error:', error);
-            showAlert('Service temporarily unavailable. Please try again later.', 'warning');
-        } finally {
-            // Reset button state
-            btn.disabled = false;
-            btn.querySelector('.btn-text').style.display = 'inline-block';
-            btn.querySelector('.loading').style.display = 'none';
-        }
-    });
-    
-    function showAlert(message, type) {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        const container = document.querySelector('.hero-section');
-        container.insertBefore(alertDiv, container.firstChild);
-        
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-            if (alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 5000);
-    }
 
-    function displayMetrics(containerId, metrics) {
-        const container = document.getElementById(containerId);
-        container.innerHTML = `
-            <div class="row">
-                <div class="col-6">
-                    <div class="metric-item">
-                        <span class="metric-label">Sentiment:</span>
-                        <span class="metric-value">${metrics.sentiment}</span>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="metric-item">
-                        <span class="metric-label">Factual Accuracy:</span>
-                        <span class="metric-value">${metrics.factual_accuracy}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="row mt-2">
-                <div class="col-6">
-                    <div class="metric-item">
-                        <span class="metric-label">Diversity:</span>
-                        <span class="metric-value">${metrics.diversity}</span>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="metric-item">
-                        <span class="metric-label">Length:</span>
-                        <span class="metric-value">${metrics.length}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results-section').style.display = 'none';
 
-    function displayOptimizationHistory(history, actions) {
-        const container = document.getElementById('optimizationHistory');
-        if (history && history.length > 0) {
-            let historyHtml = '<div class="timeline">';
-            history.forEach((step, index) => {
-                const actionName = step.action_name ? step.action_name.replace('_', ' ').toUpperCase() : 'Unknown';
-                const score = step.score ? step.score.toFixed(3) : 'N/A';
-                historyHtml += `
-                    <div class="timeline-item">
-                        <div class="timeline-marker">${index + 1}</div>
-                        <div class="timeline-content">
-                            <strong>Action:</strong> ${actionName}<br>
-                            <strong>Score:</strong> ${score}<br>
-                            <strong>Prompt:</strong> ${step.prompt || 'N/A'}
-                        </div>
-                    </div>
-                `;
-            });
-            historyHtml += '</div>';
-            container.innerHTML = historyHtml;
-        } else {
-            container.innerHTML = '<p class="text-muted">No optimization history available</p>';
-        }
-    }
-    
-    async function loadHistory() {
-        try {
-            const response = await fetch('/history');
-            const history = await response.json();
-            
-            if (history.length > 0) {
-                const historyList = document.getElementById('historyList');
-                historyList.innerHTML = '';
-                
-                history.slice(-5).reverse().forEach(item => {
-                    const historyItem = document.createElement('div');
-                    historyItem.className = 'card history-item mb-2';
-                    historyItem.innerHTML = `
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <small class="text-muted">Original</small>
-                                    <p class="mb-1">${item.original_prompt}</p>
-                                </div>
-                                <div class="col-md-4">
-                                    <small class="text-muted">Optimized</small>
-                                    <p class="mb-1">${item.optimized_prompt}</p>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <span class="badge bg-primary me-1">${item.action_taken}</span>
-                                            <span class="badge ${item.improvement >= 0 ? 'bg-success' : 'bg-danger'}">
-                                                ${(item.improvement >= 0 ? '+' : '') + item.improvement}
-                                            </span>
-                                        </div>
-                                        <small class="text-muted">${item.timestamp}</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    historyList.appendChild(historyItem);
+            try {
+                const response = await fetch('/api/optimize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ prompt: promptInput })
                 });
-                
-                document.getElementById('historySection').style.display = 'block';
+
+                const result = await response.json();
+
+                if (result.success) {
+                    currentOptimization = result;
+                    displayResults(result);
+                } else {
+                    showError(result.error || 'Optimization failed');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
             }
-        } catch (error) {
-            console.error('Error loading history:', error);
         }
-    }
-});
-</script>
-{% endblock %} 
+
+        function displayResults(result) {
+            document.getElementById('original-prompt').textContent = result.original;
+            document.getElementById('optimized-prompt').textContent = result.optimized;
+            document.getElementById('llm-response').textContent = result.llm_response;
+            document.getElementById('metrics').textContent = `Reward: ${result.reward.toFixed(3)}`;
+            
+            document.getElementById('results-section').style.display = 'block';
+        }
+
+        async function submitFeedback(satisfied) {
+            if (!currentOptimization) {
+                alert('No optimization to provide feedback for.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        satisfied: satisfied,
+                        original: currentOptimization.original,
+                        optimized: currentOptimization.optimized,
+                        response: currentOptimization.llm_response
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess('Feedback submitted successfully!');
+                    loadStats(); // Refresh statistics
+                } else {
+                    showError(result.error || 'Failed to submit feedback');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const status = result.status;
+                    const statusText = status.model_loaded ? 'Online' : 'Offline';
+                    const statusClass = status.model_loaded ? 'status-online' : 'status-offline';
+                    
+                    showSuccess(`Model Status: <span class="status-indicator ${statusClass}"></span>${statusText}`);
+                } else {
+                    showError(result.error || 'Failed to check status');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/statistics');
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayStats(result.statistics);
+                } else {
+                    showError(result.error || 'Failed to load statistics');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        function displayStats(stats) {
+            const statsSection = document.getElementById('stats-section');
+            const statsGrid = document.getElementById('stats-grid');
+            
+            if (stats.message) {
+                statsGrid.innerHTML = `<div class="stat-card"><p>${stats.message}</p></div>`;
+            } else {
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.total_feedback}</div>
+                        <div class="stat-label">Total Feedback</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.satisfied_count}</div>
+                        <div class="stat-label">Satisfied Responses</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.satisfaction_rate.toFixed(1)}%</div>
+                        <div class="stat-label">Satisfaction Rate</div>
+                    </div>
+                `;
+            }
+            
+            statsSection.style.display = 'block';
+        }
+
+        function clearResults() {
+            document.getElementById('prompt-input').value = '';
+            document.getElementById('results-section').style.display = 'none';
+            document.getElementById('stats-section').style.display = 'none';
+            currentOptimization = null;
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = message;
+            
+            const container = document.querySelector('.main-content');
+            container.insertBefore(errorDiv, container.firstChild);
+            
+            setTimeout(() => errorDiv.remove(), 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.innerHTML = message;
+            
+            const container = document.querySelector('.main-content');
+            container.insertBefore(successDiv, container.firstChild);
+            
+            setTimeout(() => successDiv.remove(), 5000);
+        }
+
+        // Check status on page load
+        window.onload = function() {
+            checkStatus();
+        };
+    </script>
+</body>
+</html> 

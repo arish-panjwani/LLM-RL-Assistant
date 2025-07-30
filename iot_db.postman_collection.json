@@ -1,0 +1,85 @@
+{
+	"info": {
+		"_postman_id": "e84db305-8902-4d2e-b509-9c7d033b21b0",
+		"name": "iot_db",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "43351236"
+	},
+	"item": [
+		{
+			"name": "http://127.0.0.1:5000/submit_prompt",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "timestamp",
+						"value": "text ",
+						"type": "text"
+					},
+					{
+						"key": "model",
+						"value": "text",
+						"type": "text"
+					},
+					{
+						"key": "original_prompt",
+						"value": "text",
+						"type": "text"
+					},
+					{
+						"key": "modified_prompt",
+						"value": "text",
+						"type": "text"
+					},
+					{
+						"key": "ai_response",
+						"value": "text",
+						"type": "text"
+					},
+					{
+						"key": "feedback_summary",
+						"value": "text",
+						"type": "text"
+					},
+					{
+						"key": "final_reward",
+						"value": "text",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"timestamp\": \"2025-07-30T14:20:00Z\",\r\n  \"model\": \"gpt-4\",\r\n  \"original_prompt\": \"What is the capital of France?\",\r\n  \"modified_prompt\": \"Can you tell me the capital city of France?\",\r\n  \"ai_response\": \"The capital city of France is Paris.\",\r\n  \"feedback_summary\": \"Accurate and clearly stated response.\",\r\n  \"final_reward\": 1,\r\n  \"user_id\":1,\r\n  \"session_id\":1\r\n}\r\n\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/add_prompt",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"add_prompt"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "New Request",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		}
+	]
+}

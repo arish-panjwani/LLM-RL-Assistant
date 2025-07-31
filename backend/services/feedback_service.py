@@ -7,4 +7,5 @@ def handle_feedback(data):
     if not model:
         return {"code": 400, "response": "Invalid model"}
     #update_metrics(data.id, liked)
-    return model.feedback(data.text, liked, 7, )
+    model.feedback(data.text, liked)
+    return True

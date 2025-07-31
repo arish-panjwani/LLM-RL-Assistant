@@ -3,7 +3,7 @@ from models.ddpg_model import DDPGModel
 from models.ppo_model import PPOModel
 from models.sac_model import SACModel
 from services.groq_service import call_groq
-from database import save_prompt
+from database import insert_prompt_response
 from schemas import PromptRequest
 from config import settings
 
@@ -22,7 +22,7 @@ async def handle_prompt(data: PromptRequest):
     response = model.generate_response(data.prompt)
     groq_response = await call_groq(response)
 
-    prompt_id = save_prompt(data.prompt, groq_response)
+    prompt_id = insert_prompt_response(model, data.prompt, response, groq_response)
     sentiment = "positive"  # Stub
     return {
         "id": prompt_id,

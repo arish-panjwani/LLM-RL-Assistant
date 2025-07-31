@@ -1,19 +1,66 @@
 import sqlite3
 from config import settings
+import mysql.connector
+import os
+from dotenv import load_dotenv
 
-conn = sqlite3.connect(settings.db_url , check_same_thread=False)
-cursor = conn.cursor()
-cursor.execute("CREATE TABLE IF NOT EXISTS prompts (id INTEGER PRIMARY KEY, text TEXT, response TEXT)")
+load_dotenv()
 
-def save_prompt(prompt: str, response: str) -> int:
-    cursor.execute("INSERT INTO prompts (text, response) VALUES (?, ?)", (prompt, response))
+def get_db_connection():
+    return mysql.connector.connect(
+        host=settings.DB_HOST,
+        user=os.getenv("DB_USER","admin"),
+        password=os.getenv("DB_PASSWORD","admin"),
+        database=settings.DB_NAME
+    )
+
+# Insert prompt + response
+def insert_prompt_response(model, original_prompt, modified_prompt, ai_response):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = """
+        INSERT INTO prompt_logs
+        ( model, original_prompt, modified_prompt, ai_response)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """
+    cursor.execute(query, ( model, original_prompt, modified_prompt, ai_response))
     conn.commit()
-    return cursor.lastrowid
+    inserted_id = cursor.lastrowid
+    cursor.close()
+    conn.close()
+    return inserted_id
 
-def get_prompt_by_id(id: int):
-    cursor.execute("SELECT * FROM prompts WHERE id=?", (id,))
-    return cursor.fetchone()
+# Update reward + feedback
+def update_feedback(id, final_reward, feedback_summary):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = """
+        UPDATE prompt_logs
+        SET final_reward = %s, feedback_summary = %s
+        WHERE id = %s
+    """
+    cursor.execute(query, (final_reward, feedback_summary, id))
+    conn.commit()
+    cursor.close()
+    conn.close()
 
-def get_all_prompts():
-    cursor.execute("SELECT * FROM prompts")
-    return cursor.fetchall()
+# Get all records
+def get_all_records():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM prompt_logs")
+    records = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return records
+
+
+# Get records by prompt_id
+def get_prompt_by_id( prompt_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM prompt_logs WHERE prompt_id = %s", (prompt_id))
+    records = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return records

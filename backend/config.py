@@ -8,7 +8,8 @@ load_dotenv()
 class Settings(BaseSettings):
     host: str = os.getenv("HOST", "127.0.0.1")
     port: int = int(os.getenv("PORT", 8001))
-    db_url: str = os.getenv("DB_URL", "sqlite:///./db.sqlite3")
+    DB_HOST: str = "localhost"
+    DB_NAME: str = "prompt"
 
     groq_api_url: str = os.getenv("GROQ_API_URL")
     groq_eval_url: str = os.getenv("GROQ_EVAL_URL")

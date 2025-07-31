@@ -2,9 +2,10 @@ from .rl_base import RLModelInterface
 
 class SACModel(RLModelInterface):
     def generate_response(self, text: str) -> str:
-        return f"A response to: {text}"
+        #return self.model.predict(text)
+        return text #by pass
 
     def feedback(self, text: str, liked: bool) -> bool:
         score = 2 if liked else -1
-        print(f"Model A received feedback {score} for: {text}")
+        #self.model.feedback(text)
         return True

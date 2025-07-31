@@ -16,7 +16,7 @@ class Settings():
 
     atc_file_path: str = './model_files/a2c_actor.pth'
     ddpg_file_path: str = './model_files/ddpg_actor.pth'
-    ppo_file_path: str = './model_files/ppo_actor.pth'
+    ppo_file_path: str = './model_files/ppo_model.zip'
     sac_file_path: str = './model_files/sac_policy.pth'
 
     IMAGE_UPLOAD_DIR = ''

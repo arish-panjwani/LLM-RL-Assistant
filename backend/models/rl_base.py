@@ -52,14 +52,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class RLModelInterface:
 
-    def __init__(self, pth_file_path: str, model_class: Any = None):
-        """
-        :param pth_file_path: Relative path to the .pth file (relative to backend/)
-        :param model_class: Optional PyTorch model class (if loading state_dict)
-        """
-        self.model = self._load_pth_file(pth_file_path, model_class)
-        # self.model.eval()  # Uncomment if model supports eval() mode
-
     def _load_pth_file(self, pth_file_path: str, model_class: Any = None):
         """
         Load a PyTorch .pth file.

@@ -1,8 +1,3 @@
-
-'''from services.groq_service import call_groq
-#from database import save_prompt
-from schemas import PromptRequest
-from models.model_container import model_map'''
 from backend.services.groq_service import call_groq
 from backend.schemas import PromptRequest
 from backend.models.model_container import model_map

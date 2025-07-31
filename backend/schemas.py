@@ -16,6 +16,7 @@ class FeedbackRequest(BaseModel):
     id: int
     text: str
     score: int
+    model: str
 
 class FeedbackResponse(BaseModel):
     code: int

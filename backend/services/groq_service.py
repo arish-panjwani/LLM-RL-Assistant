@@ -6,7 +6,7 @@ async def call_groq(text: str) -> str:
             data = await resp.json()
             return data.get("result", text)
 
-from backend.utils.config import settings
+from utils.config import settings
 import aiohttp
 from dotenv import load_dotenv
 
@@ -37,7 +37,7 @@ async def call_groq(prompt: str):
             return result["choices"][0]["message"]["content"]
 '''      
 
-from backend.utils.config import settings
+from config import settings
 import aiohttp
 import os
 from dotenv import load_dotenv

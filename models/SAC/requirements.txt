@@ -3,4 +3,5 @@ sentence-transformers
 scikit-learn
 nltk
 openai
-python-dotenv
+flask
+stable-baselines3

@@ -4,9 +4,15 @@ import torch
 import numpy as np
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
-from sentence_transformers import SentenceTransformer, util
+from sentence_transformers import SentenceTransformer
 from openai import OpenAI
 from dotenv import load_dotenv
+import gym
+from gym import spaces
+
+# ✅ NEW: Import your metric & reward functions
+from metrics import compute_cosine_similarity, compute_sentiment_score, normalize_user_rating
+from reward_functions import clarity_consistency_reward, relevance_reward, hallucination_penalty_reward
 
 nltk.download('vader_lexicon')
 load_dotenv()
@@ -64,25 +70,49 @@ class PromptEnvironment:
         ]
         return sum(phrase in response.lower() for phrase in hallucination_phrases) / len(hallucination_phrases)
 
-    def calculate_reward(self, original_prompt, refined_prompt, response):
-        orig_vec = self.encoder.encode(original_prompt)
-        ref_vec = self.encoder.encode(refined_prompt)
-        cosine_sim = float(util.cos_sim(torch.tensor(orig_vec), torch.tensor(ref_vec)))
-        clarity_rating = random.uniform(5, 10)
-        words = refined_prompt.lower().split()
-        redundancy_penalty = len(words) - len(set(words))
-        sentiment_score = self.sid.polarity_scores(response)['compound']
-        hallucination_penalty = self.detect_hallucination(response)
+    # ✅ UPDATED REWARD FUNCTION
+    def calculate_reward(self, original_prompt, refined_prompt, response, user_feedback="Good", user_rating_raw="up", groq_clarity_score=0.0):
+        cosine_sim = compute_cosine_similarity(original_prompt, refined_prompt)
+        sentiment_score = compute_sentiment_score(user_feedback)
+        user_rating = normalize_user_rating(user_rating_raw)
+        lexical_redundancy = len(refined_prompt.split()) - len(set(refined_prompt.split()))
+        hallucination_score = self.detect_hallucination(response)
+        engagement_length = len(user_feedback.split())
 
-        # Reward formula
-        λ1, λ2, λ3, γ = 1.0, 0.5, 1.0, 2.0
-        return (
-            λ1 * cosine_sim
-            - λ2 * redundancy_penalty
-            + λ3 * clarity_rating
-            + 0.5 * sentiment_score
-            - γ * hallucination_penalty
-        )
+        clarity = clarity_consistency_reward(cosine_sim, lexical_redundancy, groq_clarity_score)
+        relevance = relevance_reward(user_rating, sentiment_score, engagement_length)
+        final_reward = hallucination_penalty_reward(relevance, hallucination_score)
+
+        return final_reward
 
 def load_pretrained_encoder():
     return SentenceTransformer('all-MiniLM-L6-v2')
+
+class PromptRLWrapper(gym.Env):
+    def __init__(self, encoder):
+        super().__init__()
+        self.env = PromptEnvironment(encoder)
+        self.action_space = spaces.Box(
+            low=-1.0,
+            high=1.0,
+            shape=(encoder.get_sentence_embedding_dimension(),),
+            dtype=np.float32
+        )
+        self.observation_space = spaces.Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=(encoder.get_sentence_embedding_dimension(),),
+            dtype=np.float32
+        )
+
+    def reset(self):
+        return self.env.reset().numpy()
+
+    def step(self, action):
+        action = torch.tensor(action, dtype=torch.float32)
+        refined = self.env.decode(action)
+        response = self.env.real_llm_response(refined)
+        reward = self.env.calculate_reward(self.env.original_prompt, refined, response)
+        next_state = self.env.encode(refined).numpy()
+        done = True
+        return next_state, reward, done, {}

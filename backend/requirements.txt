@@ -1,0 +1,8 @@
+fastapi==0.116.1
+uvicorn[standard]==0.30.1
+aiohttp==3.9.5
+websockets==12.0
+sqlalchemy==2.0.30
+python-dotenv==1.0.1
+pydantic==2.11.0
+pydantic-settings==2.10.1

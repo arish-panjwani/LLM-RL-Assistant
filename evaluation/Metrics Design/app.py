@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from metrics import compute_cosine_similarity, compute_sentiment_score, normalize_user_rating
 from reward_functions import clarity_consistency_reward, relevance_reward, hallucination_penalty_reward
+import os
 
 app = Flask(__name__)
 
@@ -50,5 +51,8 @@ def compute_metrics():
         "final_reward": round(final_reward, 4)
     })
 
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5001))  # default to 5001
+    app.run(debug=True, port=port)
+

@@ -1,6 +1,8 @@
-from models import model_a, model_b, model_c, model_d
+from backend.models.model_container import model_map
 
 def handle_feedback(data):
     liked = data.score >= 5
-    # For now just use ModelA
-    return model_a.RLModelA().feedback(data.text, liked)
+    model = model_map.get(data.model.upper())
+    if not model:
+        return {"code": 400, "response": "Invalid model"}
+    return model.feedback(data.text, liked)
